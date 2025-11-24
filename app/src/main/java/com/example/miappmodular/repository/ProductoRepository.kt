@@ -21,6 +21,9 @@ import java.io.File
  * Este repositorio actúa como capa de abstracción entre el API y el ViewModel,
  * encapsulando la lógica de red y transformación de datos.
  *
+ * **Arquitectura simple:**
+ * Accede directamente a RetrofitClient para obtener el API service.
+ *
  * Responsabilidades:
  * - Realizar llamadas al API usando Retrofit
  * - Convertir DTOs a modelos de dominio usando Mappers
@@ -29,6 +32,7 @@ import java.io.File
  */
 class ProductoRepository {
 
+    // Acceso directo al API service desde RetrofitClient
     private val apiService = RetrofitClient.saborLocalProductoApiService
 
     /**

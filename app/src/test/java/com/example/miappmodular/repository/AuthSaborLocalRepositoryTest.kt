@@ -1,8 +1,6 @@
 package com.example.miappmodular.repository
 
-import android.content.Context
-import android.content.SharedPreferences
-import com.example.miappmodular.data.remote.api.SaborLocalAuthApiService
+import com.example.miappmodular.data.remote.RetrofitClient
 import com.example.miappmodular.data.remote.dto.auth.AuthSaborLocalData
 import com.example.miappmodular.data.remote.dto.auth.UserDto
 import com.example.miappmodular.data.remote.dto.auth.LoginSaborLocalRequest
@@ -16,44 +14,32 @@ import retrofit2.Response
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/**
+ * Tests para AuthSaborLocalRepository
+ *
+ * **Arquitectura de tests simple:**
+ * Mockea RetrofitClient para interceptar las llamadas al API service y TokenManager.
+ * Los estudiantes pueden ver claramente qué se está mockeando y por qué.
+ */
 class AuthSaborLocalRepositoryTest {
 
-    //mocks
-    private lateinit var mockContext: Context
-    private lateinit var mockApiService: SaborLocalAuthApiService
-    private lateinit var mockSharedPreferences: SharedPreferences
-    private lateinit var mockEditor : SharedPreferences.Editor
-
-    // SUT
+    // SUT (System Under Test)
     private lateinit var repository: AuthSaborLocalRepository
 
     /**
-     * Función para crear el setup de nuestras mocks
-     * @see com.example.miappmodular.data.remote.RetrofitClient
+     * Función para crear el setup de nuestros mocks
+     *
+     * Mockea RetrofitClient para controlar:
+     * - El API service que retorna respuestas simuladas
+     * - El TokenManager que guarda tokens en memoria
      */
     @Before
     fun setup() {
+        // Mockear el objeto singleton RetrofitClient
+        mockkObject(RetrofitClient)
 
-        //crear mocks
-        mockContext = mockk(relaxed= true)
-        mockApiService = mockk<SaborLocalAuthApiService>()
-        mockSharedPreferences=mockk(relaxed= true)
-        mockEditor= mockk(relaxed= true)
-
-        // configurar comportamiento de sharedpreferece
-
-        every { mockContext.getSharedPreferences(any(),any()) } returns mockSharedPreferences
-        every { mockSharedPreferences.edit() } returns mockEditor
-        every { mockEditor.putString(any(),any()) } returns mockEditor
-        every { mockEditor.apply() } just Runs
-        every { mockEditor.clear() } returns mockEditor
-
-        // Mockear Retrofit Client para el uso de nuestro mock
-        mockkObject(com.example.miappmodular.data.remote.RetrofitClient)
-        every { com.example.miappmodular.data.remote.RetrofitClient.saborLocalAuthApiService } returns mockApiService
-
-        repository = AuthSaborLocalRepository(mockContext)
-
+        // El repository se crea normalmente, pero usará los mocks de RetrofitClient
+        repository = AuthSaborLocalRepository()
     }
 
 
@@ -71,11 +57,11 @@ class AuthSaborLocalRepositoryTest {
     @Test
     fun `Login exitoso debe retornar Success con User` () = runTest {
 
-        // Primero definimos nuestras variables
+        // Primero definimos nuestras variables de entrada
         val email = "test@example.com"
         val password = "password123"
 
-
+        // Definir la respuesta esperada del API
         val userDto = UserDto(
             id = "user123",
             nombre = "Test User",
@@ -83,38 +69,46 @@ class AuthSaborLocalRepositoryTest {
             role = "CLIENTE"
         )
 
-        val authData = AuthSaborLocalData (
-            user= userDto,
+        val authData = AuthSaborLocalData(
+            user = userDto,
             accessToken = "mock_token_12345"
         )
 
         val apiResponse = ApiResponse(
-           success = true,
+            success = true,
             message = "Login Exitoso",
             data = authData
         )
 
-        val reponse = Response.success(apiResponse)
+        val response = Response.success(apiResponse)
 
+        // Mockear el API service para que retorne nuestra respuesta simulada
+        val mockApiService = mockk<com.example.miappmodular.data.remote.api.SaborLocalAuthApiService>()
         coEvery {
-            mockApiService.login(LoginSaborLocalRequest(email,password))
-        } returns reponse
+            mockApiService.login(LoginSaborLocalRequest(email, password))
+        } returns response
 
-        val result = repository.login(email,password)
+        // Mockear el TokenManager para verificar que se llame
+        val mockTokenManager = mockk<com.example.miappmodular.data.local.TokenManager>(relaxed = true)
 
-        assertTrue ( result.isSuccess,"El resultado debe ser Success")
+        // Configurar RetrofitClient para usar nuestros mocks
+        every { RetrofitClient.saborLocalAuthApiService } returns mockApiService
+        every { RetrofitClient.getTokenManager() } returns mockTokenManager
 
+        // Ejecutar el método que queremos probar
+        val result = repository.login(email, password)
+
+        // Verificar que el resultado es exitoso
+        assertTrue(result.isSuccess, "El resultado debe ser Success")
+
+        // Verificar que los datos del usuario son correctos
         val user = result.getOrNull()
         assertEquals("user123", user?.id)
         assertEquals("Test User", user?.nombre)
         assertEquals(email, user?.email)
         assertEquals("CLIENTE", user?.role)
 
-        // Verificar que se guardó el token
-        verify { mockEditor.putString("auth_token", "mock_token_12345") }
-        verify { mockEditor.putString("user_id", "user123") }
-        verify { mockEditor.apply() }
-
-
+        // Verificar que se guardó el token en TokenManager
+        verify { mockTokenManager.saveToken("mock_token_12345", userDto) }
     }
 }

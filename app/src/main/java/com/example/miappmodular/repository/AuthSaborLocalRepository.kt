@@ -1,11 +1,8 @@
 package com.example.miappmodular.repository
 
-import android.content.Context
-import android.content.SharedPreferences
 import com.example.miappmodular.data.remote.RetrofitClient
 import com.example.miappmodular.data.remote.dto.auth.LoginSaborLocalRequest
 import com.example.miappmodular.data.remote.dto.auth.RegisterSaborLocalRequest
-import com.example.miappmodular.data.remote.dto.auth.UserDto
 import com.example.miappmodular.model.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,75 +11,52 @@ import kotlinx.coroutines.withContext
  * Repository para autenticación con SaborLocal API
  *
  * Maneja login, registro y persistencia de sesión.
- * Guarda el token JWT en SharedPreferences.
+ * Usa TokenManager de RetrofitClient para gestión segura de tokens.
+ *
+ * **Arquitectura simple:**
+ * Este repository accede directamente a RetrofitClient (singleton)
+ * para obtener el API service y el TokenManager.
+ * Esto es más fácil de entender para estudiantes que Dependency Injection.
  */
-class AuthSaborLocalRepository(context: Context) {
+class AuthSaborLocalRepository {
 
+    // Acceso directo a las dependencias desde RetrofitClient
+    private val tokenManager = RetrofitClient.getTokenManager()
     private val apiService = RetrofitClient.saborLocalAuthApiService
-    private val prefs: SharedPreferences = context.getSharedPreferences(
-        "saborlocal_prefs",
-        Context.MODE_PRIVATE
-    )
-
-    companion object {
-        private const val KEY_TOKEN = "auth_token"
-        private const val KEY_USER_ID = "user_id"
-        private const val KEY_USER_NAME = "user_name"
-        private const val KEY_USER_EMAIL = "user_email"
-        private const val KEY_USER_ROLE = "user_role"
-    }
 
     /**
      * Verifica si hay una sesión activa
      */
     fun isLoggedIn(): Boolean {
-        return getToken() != null
+        return tokenManager.isLoggedIn()
     }
 
     /**
      * Obtiene el token JWT guardado
      */
     fun getToken(): String? {
-        return prefs.getString(KEY_TOKEN, null)
+        return tokenManager.getToken()
     }
 
     /**
-     * Guarda el token y datos del usuario
+     * Guarda el token y datos del usuario usando TokenManager
      */
-    private fun saveSession(token: String, user: UserDto) {
-        prefs.edit().apply {
-            putString(KEY_TOKEN, token)
-            putString(KEY_USER_ID, user.id)
-            putString(KEY_USER_NAME, user.nombre)
-            putString(KEY_USER_EMAIL, user.email)
-            putString(KEY_USER_ROLE, user.role)
-            apply()
-        }
+    private fun saveSession(token: String, user: com.example.miappmodular.data.remote.dto.auth.UserDto) {
+        tokenManager.saveToken(token, user)
     }
 
     /**
      * Obtiene el usuario guardado en sesión
      */
     fun getCurrentUser(): User? {
-        val token = getToken() ?: return null
-        val userId = prefs.getString(KEY_USER_ID, null) ?: return null
-        val userName = prefs.getString(KEY_USER_NAME, null) ?: return null
-        val userEmail = prefs.getString(KEY_USER_EMAIL, null) ?: return null
-        val userRole = prefs.getString(KEY_USER_ROLE, null) ?: return null
-
-        return User(
-            id = userId,
-            nombre = userName,
-            email = userEmail,
-            role = userRole
-        )
+        return tokenManager.getCurrentUser()
     }
 
     /**
      * Cierra sesión (elimina token y datos)
      */
     fun logout() {
-        prefs.edit().clear().apply()
+        tokenManager.clearToken()
     }
 
     /**
@@ -269,13 +243,8 @@ class AuthSaborLocalRepository(context: Context) {
                 if (body != null && body.success && body.data != null) {
                     val userDto = body.data
 
-                    // Actualizar datos en SharedPreferences
-                    prefs.edit().apply {
-                        putString(KEY_USER_NAME, userDto.nombre)
-                        putString(KEY_USER_EMAIL, userDto.email)
-                        putString(KEY_USER_ROLE, userDto.role)
-                        apply()
-                    }
+                    // Actualizar datos del usuario en TokenManager
+                    tokenManager.updateUserData(userDto)
 
                     val user = User(
                         id = userDto.id,

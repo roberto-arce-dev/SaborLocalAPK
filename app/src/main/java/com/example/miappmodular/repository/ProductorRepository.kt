@@ -16,9 +16,13 @@ import java.io.File
 
 /**
  * Repositorio para gestionar operaciones relacionadas con Productores
+ *
+ * **Arquitectura simple:**
+ * Accede directamente a RetrofitClient para obtener el API service.
  */
 class ProductorRepository {
 
+    // Acceso directo al API service desde RetrofitClient
     private val apiService = RetrofitClient.saborLocalProductorApiService
 
     /**

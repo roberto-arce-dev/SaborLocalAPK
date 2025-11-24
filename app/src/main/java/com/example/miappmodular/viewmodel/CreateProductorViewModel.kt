@@ -14,10 +14,14 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel para crear productores
  * Solo ADMIN puede crear productores
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class CreateProductorViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AuthSaborLocalRepository(application)
+    // El repository se crea directamente (sin inyección de dependencias)
+    private val repository = AuthSaborLocalRepository()
 
     // Estado de la UI
     private val _uiState = MutableStateFlow<CreateProductorUiState>(CreateProductorUiState.Idle)

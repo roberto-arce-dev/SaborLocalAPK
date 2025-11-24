@@ -19,9 +19,13 @@ import java.io.File
  * - Exponer Flows para que la UI observe cambios
  * - Ejecutar operaciones del repositorio en coroutines
  * - Manejar loading states y errores
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class ProductoViewModel : ViewModel() {
 
+    // El repository se crea directamente (sin inyección de dependencias)
     private val repository = ProductoRepository()
 
     // Estado de la lista de productos

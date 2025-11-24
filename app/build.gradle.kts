@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp") version "2.1.0-1.0.29"
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -107,6 +107,9 @@ dependencies {
 
     // Coil - Para cargar imágenes desde URI
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Security - Encrypted SharedPreferences (para TokenManager)
+    implementation(libs.androidx.security.crypto)
 
     // Testing
     testImplementation(libs.junit)

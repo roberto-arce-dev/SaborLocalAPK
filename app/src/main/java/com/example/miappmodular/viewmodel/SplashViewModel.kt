@@ -13,10 +13,14 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel para la pantalla splash
  * Verifica si hay una sesión activa al iniciar la app
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class SplashViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AuthSaborLocalRepository(application)
+    // El repository se crea directamente (sin inyección de dependencias)
+    private val repository = AuthSaborLocalRepository()
 
     private val _navigationState = MutableStateFlow<SplashNavigationState>(SplashNavigationState.Checking)
     val navigationState: StateFlow<SplashNavigationState> = _navigationState.asStateFlow()

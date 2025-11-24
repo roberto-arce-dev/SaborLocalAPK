@@ -14,9 +14,13 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel para crear productos
  * Solo PRODUCTORES pueden crear productos
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class CreateProductoViewModel(application: Application) : AndroidViewModel(application) {
 
+    // El repository se crea directamente (sin inyección de dependencias)
     private val repository = ProductoRepository()
 
     // Estado de la UI

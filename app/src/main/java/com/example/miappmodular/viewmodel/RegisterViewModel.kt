@@ -15,10 +15,14 @@ import kotlinx.coroutines.launch
  *
  * Maneja el estado de la UI y las operaciones de registro.
  * Solo permite registro de CLIENTES (auto-registro).
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AuthSaborLocalRepository(application)
+    // El repository se crea directamente (sin inyección de dependencias)
+    private val repository = AuthSaborLocalRepository()
 
     // Estado de la UI
     private val _uiState = MutableStateFlow<RegisterUiState>(RegisterUiState.Idle)

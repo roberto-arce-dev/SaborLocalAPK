@@ -1,9 +1,6 @@
 package com.example.miappmodular.data.remote
 
-import android.content.Context
-import android.content.SharedPreferences
-import com.example.miappmodular.data.local.SessionManager
-import kotlinx.coroutines.runBlocking
+import com.example.miappmodular.data.local.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -17,38 +14,32 @@ import okhttp3.Response
  *
  * **Funcionamiento:**
  * 1. Intercepta todas las peticiones HTTP antes de enviarlas al servidor
- * 2. Recupera el authToken de SaborLocal SharedPreferences o SessionManager
+ * 2. Recupera el authToken de TokenManager (EncryptedSharedPreferences)
  * 3. Añade el header `Authorization: Bearer {token}` si el token existe
  * 4. Permite que la petición continúe normalmente
  *
- * **Prioridad de tokens:**
- * 1. Primero intenta obtener el token de SaborLocal (SharedPreferences)
- * 2. Si no existe, intenta obtener el token de SessionManager (DataStore)
+ * **¿Por qué TokenManager es sincrónico?**
+ * - Los interceptores de OkHttp se ejecutan en threads de red
+ * - No pueden usar suspend functions sin bloquear el thread pool
+ * - TokenManager usa EncryptedSharedPreferences (sincrónico) en lugar de DataStore (async)
+ * - Esto evita `runBlocking()` que degradaría el rendimiento de red
  *
- * @property sessionManager Gestor de sesión que proporciona el authToken de Xano.
- * @property context Contexto para acceder a SharedPreferences de SaborLocal.
+ * @property tokenManager Gestor de tokens JWT inyectado por Hilt
  *
- * @see SessionManager
- * @see RetrofitClient
- * @see AuthApiService
+ * @see TokenManager
+ * @see NetworkModule
  */
 class AuthInterceptor(
-    private val sessionManager: SessionManager,
-    private val context: Context
+    private val tokenManager: TokenManager
 ) : Interceptor {
-
-    private val saborLocalPrefs: SharedPreferences by lazy {
-        context.getSharedPreferences("saborlocal_prefs", Context.MODE_PRIVATE)
-    }
 
     /**
      * Intercepta y modifica la petición HTTP para añadir autenticación.
      *
      * **Flujo de ejecución:**
-     * 1. Intenta obtener token de SaborLocal (SharedPreferences)
-     * 2. Si no existe, intenta obtener token de SessionManager (DataStore)
-     * 3. Si existe token, crea una nueva petición con header Authorization
-     * 4. Si no hay token, deja la petición sin modificar
+     * 1. Obtiene el token JWT de TokenManager (operación sincrónica)
+     * 2. Si existe token, crea una nueva petición con header Authorization
+     * 3. Si no hay token, deja la petición sin modificar
      *
      * **Header generado:**
      * ```
@@ -61,15 +52,8 @@ class AuthInterceptor(
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Intentar obtener token de SaborLocal primero
-        var token = saborLocalPrefs.getString("auth_token", null)
-
-        // Si no hay token de SaborLocal, intentar con SessionManager (Xano)
-        if (token.isNullOrEmpty()) {
-            token = runBlocking {
-                sessionManager.getAuthToken()
-            }
-        }
+        // Obtener token de TokenManager (sincrónico, no bloquea threads)
+        val token = tokenManager.getToken()
 
         // Si no hay token, continuar con la petición original sin modificar
         if (token.isNullOrEmpty()) {

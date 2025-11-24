@@ -13,9 +13,13 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel para listar productos con filtros
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class ProductosListViewModel(application: Application) : AndroidViewModel(application) {
 
+    // El repository se crea directamente (sin inyección de dependencias)
     private val repository = ProductoRepository()
 
     // Estado de la UI

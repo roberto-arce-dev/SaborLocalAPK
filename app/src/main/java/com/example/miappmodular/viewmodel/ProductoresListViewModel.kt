@@ -12,10 +12,14 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel para listar productores (Usuarios con rol PRODUCTOR)
+ *
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
 class ProductoresListViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = AuthSaborLocalRepository(application)
+    // El repository se crea directamente (sin inyección de dependencias)
+    private val repository = AuthSaborLocalRepository()
 
     private val _uiState = MutableStateFlow<ProductoresListUiState>(ProductoresListUiState.Loading)
     val uiState: StateFlow<ProductoresListUiState> = _uiState.asStateFlow()
