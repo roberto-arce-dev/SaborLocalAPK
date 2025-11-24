@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Configuración de seguridad de red para desarrollo local
+
+        IMPORTANTE: Esta configuración permite tráfico HTTP (cleartext) para desarrollo.
+        En producción, SIEMPRE usa HTTPS.
+    -->
+
+    <!-- Configuración para desarrollo: permite HTTP a localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- 10.0.2.2 es la IP especial del emulador Android para acceder al localhost del host -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+
+        <!-- localhost para pruebas en dispositivos físicos o emuladores alternativos -->
+        <domain includeSubdomains="true">localhost</domain>
+
+        <!-- 127.0.0.1 para pruebas locales -->
+        <domain includeSubdomains="true">127.0.0.1</domain>
+
+        <!--
+            Si tu backend está en otra máquina de la red local, agrégala aquí:
+            <domain includeSubdomains="true">192.168.1.X</domain>
+        -->
+    </domain-config>
+
+    <!--
+        Configuración base: bloquea HTTP para todos los demás dominios
+        Esto asegura que solo los dominios listados arriba puedan usar HTTP
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Confía en certificados del sistema (CAs oficiales) -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

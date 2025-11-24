@@ -219,4 +219,70 @@ object ValidationUtils {
             else -> null
         }
     }
+
+    /**
+     * Valida el formato de un número de teléfono.
+     *
+     * **Reglas de validación:**
+     * 1. **No vacío:** El teléfono no puede estar en blanco
+     * 2. **Solo números y símbolos permitidos:** +, -, espacios, paréntesis
+     * 3. **Longitud mínima:** Al menos 8 dígitos (sin contar símbolos)
+     * 4. **Longitud máxima:** Máximo 15 dígitos (estándar internacional)
+     *
+     * **Formatos aceptados (ejemplos para Chile):**
+     * - ✅ "+56912345678" (formato internacional)
+     * - ✅ "912345678" (formato nacional móvil)
+     * - ✅ "+56 9 1234 5678" (con espacios)
+     * - ✅ "+56-9-1234-5678" (con guiones)
+     * - ✅ "(56) 912345678" (con paréntesis)
+     * - ✅ "223456789" (fijo Santiago, 9 dígitos)
+     *
+     * **Formatos inválidos:**
+     * - ❌ "" (vacío)
+     * - ❌ "123" (muy corto)
+     * - ❌ "abcd1234" (contiene letras)
+     * - ❌ "12345678901234567" (muy largo, más de 15 dígitos)
+     *
+     * **Nota sobre formatos internacionales:**
+     * Esta validación es flexible para soportar diferentes formatos de países.
+     * Para validación estricta de un país específico, considerar usar
+     * librerías especializadas como libphonenumber.
+     *
+     * Ejemplo de uso:
+     * ```kotlin
+     * val phone = "+56912345678"
+     * val error = ValidationUtils.validatePhone(phone)
+     *
+     * if (error == null) {
+     *     // Teléfono válido
+     *     savePhone(phone)
+     * } else {
+     *     // Mostrar error
+     *     _phoneError.value = error
+     * }
+     * ```
+     *
+     * @param phone Número de teléfono a validar.
+     * @return `null` si el teléfono es válido, o mensaje de error descriptivo.
+     *
+     * @see validateEmail
+     * @see isValidName
+     */
+    fun validatePhone(phone: String): String? {
+        return when {
+            phone.isBlank() -> "El teléfono es obligatorio"
+            else -> {
+                // Extraer solo los dígitos para validar longitud
+                val digitsOnly = phone.filter { it.isDigit() }
+                when {
+                    digitsOnly.length < 8 -> "El teléfono debe tener al menos 8 dígitos"
+                    digitsOnly.length > 15 -> "El teléfono no puede tener más de 15 dígitos"
+                    // Verificar que solo contenga dígitos y símbolos permitidos
+                    !phone.all { it.isDigit() || it in setOf('+', '-', ' ', '(', ')') } ->
+                        "El teléfono solo puede contener números y símbolos (+, -, espacios, paréntesis)"
+                    else -> null
+                }
+            }
+        }
+    }
 }

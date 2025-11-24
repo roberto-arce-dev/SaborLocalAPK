@@ -69,13 +69,16 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
 
     /**
-     * URL base de la API de Xano.
+     * URL base de la API de SaborLocal.
      *
-     * Todas las rutas definidas en [AuthApiService] se concatenan con esta base.
-     * Ejemplo: `@POST("auth/login")` se convierte en
-     * `https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/auth/login`
+     * Todas las rutas definidas en [SaborLocalApiService] se concatenan con esta base.
+     * Ejemplo: `@GET("producto")` se convierte en `http://10.0.2.2:3008/api/producto`
+     *
+     * NOTA: 10.0.2.2 es la IP especial que el emulador de Android usa para acceder
+     * a localhost de tu máquina host. Si usas un dispositivo físico, cambia esto
+     * por la IP de tu computadora en la red local (ej: 192.168.1.X).
      */
-    private const val BASE_URL = "https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/"
+    private const val BASE_URL = "http://10.0.2.2:3008/api/"
 
     /**
      * SessionManager para manejar tokens de autenticación.
@@ -83,6 +86,13 @@ object RetrofitClient {
      * Debe ser inicializado llamando [initialize] antes de usar el cliente.
      */
     private lateinit var sessionManager: SessionManager
+
+    /**
+     * Contexto de la aplicación para acceder a SharedPreferences y otros recursos.
+     *
+     * Debe ser inicializado llamando [initialize] antes de usar el cliente.
+     */
+    private lateinit var context: Context
 
     /**
      * Inicializa el RetrofitClient con el contexto de la aplicación.
@@ -104,6 +114,7 @@ object RetrofitClient {
      * ```
      */
     fun initialize(context: Context) {
+        this.context = context.applicationContext
         sessionManager = SessionManager(context.applicationContext)
     }
 
@@ -135,7 +146,7 @@ object RetrofitClient {
      * @see AuthInterceptor
      */
     private val okHttpClient: OkHttpClient by lazy {
-        val authInterceptor = AuthInterceptor(sessionManager)
+        val authInterceptor = AuthInterceptor(sessionManager, context)
 
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -178,30 +189,61 @@ object RetrofitClient {
             .build()
     }
 
+    // ==================== SABOR LOCAL API SERVICES ====================
+
     /**
-     * Servicio de autenticación generado automáticamente por Retrofit.
-     *
-     * Retrofit toma la interfaz [AuthApiService] y genera dinámicamente
-     * una implementación completa en tiempo de ejecución usando Reflection
-     * y Dynamic Proxy.
-     *
-     * Este servicio contiene todos los endpoints de autenticación:
-     * - `signUp()`: Registro de nuevos usuarios
-     * - `login()`: Autenticación de usuarios existentes
-     * - `userActually()`: Obtener datos del usuario autenticado
-     *
-     * **Uso:**
-     * ```kotlin
-     * val apiService = RetrofitClient.authApiService
-     * val response = apiService.login(LoginRequest(email, password))
-     * ```
-     *
-     * **Lazy initialization:**
-     * La interfaz se implementa solo cuando se accede por primera vez.
-     *
-     * @see AuthApiService
+     * Servicio de autenticación de SaborLocal
+     * Endpoints: login, register, profile, users, create-productor
      */
-    val authApiService: AuthApiService by lazy {
-        retrofit.create(AuthApiService::class.java)
+    val saborLocalAuthApiService: com.example.miappmodular.data.remote.api.SaborLocalAuthApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalAuthApiService::class.java)
+    }
+
+    /**
+     * Servicio de productos de SaborLocal
+     * Endpoints: CRUD de productos + upload imagen
+     */
+    val saborLocalProductoApiService: com.example.miappmodular.data.remote.api.SaborLocalProductoApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalProductoApiService::class.java)
+    }
+
+    /**
+     * Servicio de productores de SaborLocal
+     * Endpoints: CRUD de productores + upload imagen
+     */
+    val saborLocalProductorApiService: com.example.miappmodular.data.remote.api.SaborLocalProductorApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalProductorApiService::class.java)
+    }
+
+    /**
+     * Servicio de clientes de SaborLocal
+     * Endpoints: CRUD de clientes
+     */
+    val saborLocalClienteApiService: com.example.miappmodular.data.remote.api.SaborLocalClienteApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalClienteApiService::class.java)
+    }
+
+    /**
+     * Servicio de pedidos de SaborLocal
+     * Endpoints: CRUD de pedidos
+     */
+    val saborLocalPedidoApiService: com.example.miappmodular.data.remote.api.SaborLocalPedidoApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalPedidoApiService::class.java)
+    }
+
+    /**
+     * Servicio de entregas de SaborLocal
+     * Endpoints: CRUD de entregas
+     */
+    val saborLocalEntregaApiService: com.example.miappmodular.data.remote.api.SaborLocalEntregaApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalEntregaApiService::class.java)
+    }
+
+    /**
+     * Servicio de upload de SaborLocal
+     * Endpoints: upload de imágenes independientes
+     */
+    val saborLocalUploadApiService: com.example.miappmodular.data.remote.api.SaborLocalUploadApiService by lazy {
+        retrofit.create(com.example.miappmodular.data.remote.api.SaborLocalUploadApiService::class.java)
     }
 }

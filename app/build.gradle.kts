@@ -110,8 +110,17 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    //coroutines
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    //mocks
+    testImplementation(libs.mockk)
+    androidTestImplementation(libs.mockk.android)
+    testImplementation("org.jetbrains.kotlin:kotlin-test")
+
+    // andorid testing
     androidTestImplementation(libs.androidx.junit.v115)
     androidTestImplementation(libs.androidx.espresso.core.v351)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 

@@ -72,7 +72,6 @@ import com.example.miappmodular.ui.theme.*
  * @param onNavigateToCamera Callback para navegar a módulo de cámara.
  * @param onLogout Callback para cerrar sesión y regresar a login.
  *
- * @see StatCard
  * @see FeatureModuleCard
  * @see com.example.miappmodular.ui.navigation.AppNavigation
  * @see ProfileScreen
@@ -83,6 +82,10 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToMap: () -> Unit = {},
     onNavigateToCamera: () -> Unit = {},
+    onNavigateToProductosList: () -> Unit = {},
+    onNavigateToCreateProducto: () -> Unit = {},
+    onNavigateToCreateProductor: () -> Unit = {},
+    onNavigateToProductoresList: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -182,24 +185,7 @@ fun HomeScreen(
                     .padding(16.dp)
             ) {
                 // Header con estadísticas
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    StatCard(
-                        title = "Total Usuarios",
-                        value = "1,234",
-                        icon = Icons.Filled.People,
-                        modifier = Modifier.weight(1f)
-                    )
 
-                    StatCard(
-                        title = "Activos Hoy",
-                        value = "89",
-                        icon = Icons.Filled.TrendingUp,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -228,63 +214,44 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+
                     item {
                         FeatureModuleCard(
-                            icon = Icons.Filled.Map,
-                            title = "Mapa GPS",
-                            description = "Ubicación y navegación",
+                            icon = Icons.Filled.ShoppingCart,
+                            title = "Productos",
+                            description = "Lista de productos",
                             badge = "IL 2.4",
-                            onClick = onNavigateToMap
+                            onClick = onNavigateToProductosList
                         )
                     }
 
                     item {
                         FeatureModuleCard(
-                            icon = Icons.Filled.CameraAlt,
-                            title = "Cámara",
-                            description = "Captura de fotos",
+                            icon = Icons.Filled.AddCircle,
+                            title = "Crear Producto",
+                            description = "Nuevo producto",
                             badge = "IL 2.4",
-                            onClick = onNavigateToCamera
+                            onClick = onNavigateToCreateProducto
                         )
                     }
 
                     item {
                         FeatureModuleCard(
-                            icon = Icons.Filled.Storage,
-                            title = "Base de Datos",
-                            description = "Persistencia local",
-                            badge = "IL 2.3",
-                            onClick = { }
+                            icon = Icons.Filled.PersonAdd,
+                            title = "Crear Productor",
+                            description = "Nuevo productor (ADMIN)",
+                            badge = "IL 2.4",
+                            onClick = onNavigateToCreateProductor
                         )
                     }
 
                     item {
                         FeatureModuleCard(
-                            icon = Icons.Filled.Settings,
-                            title = "Configuración",
-                            description = "Preferencias de la app",
-                            badge = "IL 2.3",
-                            onClick = { }
-                        )
-                    }
-
-                    item {
-                        FeatureModuleCard(
-                            icon = Icons.Filled.Palette,
-                            title = "Temas",
-                            description = "Personalización visual",
-                            badge = "IL 2.1",
-                            onClick = { }
-                        )
-                    }
-
-                    item {
-                        FeatureModuleCard(
-                            icon = Icons.Filled.Notifications,
-                            title = "Notificaciones",
-                            description = "Alertas y mensajes",
-                            badge = "IL 2.2",
-                            onClick = { }
+                            icon = Icons.Filled.Group,
+                            title = "Ver Productores",
+                            description = "Lista de productores",
+                            badge = "IL 2.4",
+                            onClick = onNavigateToProductoresList
                         )
                     }
                 }

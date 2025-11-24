@@ -29,6 +29,7 @@ roomRuntime = "2.8.2"
 retrofit = "2.9.0"
 okhttp = "4.12.0"
 gson = "2.10.1"
+mockk = "1.13.8"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -74,6 +75,8 @@ retrofit-converter-gson = { module = "com.squareup.retrofit2:converter-gson", ve
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

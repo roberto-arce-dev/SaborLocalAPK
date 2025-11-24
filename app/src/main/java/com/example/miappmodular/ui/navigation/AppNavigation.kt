@@ -58,8 +58,30 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = "splash"
     ) {
+        /**
+         * Ruta: splash
+         *
+         * Pantalla inicial que verifica si hay una sesión activa.
+         * - Si hay token válido → Navega a home
+         * - Si no hay token → Navega a login
+         */
+        composable("splash") {
+            SplashScreen(
+                onNavigateToHome = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
+        }
+
         /**
          * Ruta: login
          *
@@ -91,7 +113,7 @@ fun AppNavigation() {
          */
         composable("register") {
             RegisterScreen(
-                onNavigateBack = {
+                onNavigateToLogin = {
                     navController.navigateUp()
                 },
                 onRegisterSuccess = {
@@ -117,6 +139,18 @@ fun AppNavigation() {
                 onNavigateToProfile = {
                     navController.navigate("profile")
                 },
+                onNavigateToProductosList = {
+                    navController.navigate("productos_list")
+                },
+                onNavigateToCreateProducto = {
+                    navController.navigate("create_producto")
+                },
+                onNavigateToCreateProductor = {
+                    navController.navigate("create_productor")
+                },
+                onNavigateToProductoresList = {
+                    navController.navigate("productores_list")
+                },
                 onLogout = {
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
@@ -139,6 +173,78 @@ fun AppNavigation() {
             ProfileScreen(
                 onNavigateBack = {
                     navController.navigateUp()
+                }
+            )
+        }
+
+        /**
+         * Ruta: productos_list
+         *
+         * Lista de productos con filtros de búsqueda.
+         * Permite buscar por nombre, filtrar por productor y rango de precios.
+         */
+        composable("productos_list") {
+            ProductosListScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onProductClick = { productId ->
+                    // TODO: Navegar a detalles del producto
+                    // navController.navigate("producto_detail/$productId")
+                }
+            )
+        }
+
+        /**
+         * Ruta: create_producto
+         *
+         * Formulario para crear un nuevo producto.
+         * Solo accesible para usuarios con rol PRODUCTOR.
+         */
+        composable("create_producto") {
+            CreateProductoScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onProductoCreated = {
+                    // Navegar de vuelta a la lista de productos
+                    navController.popBackStack("productos_list", inclusive = false)
+                }
+            )
+        }
+
+        /**
+         * Ruta: create_productor
+         *
+         * Formulario para crear un nuevo productor.
+         * Solo accesible para usuarios con rol ADMIN.
+         */
+        composable("create_productor") {
+            CreateProductorScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onProductorCreated = {
+                    // Navegar de vuelta al home
+                    navController.popBackStack("home", inclusive = false)
+                }
+            )
+        }
+
+        /**
+         * Ruta: productores_list
+         *
+         * Lista de todos los productores registrados.
+         * Muestra información de cada productor y permite eliminarlos.
+         */
+        composable("productores_list") {
+            ProductoresListScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onProductorClick = { productorId ->
+                    // TODO: Navegar a detalles del productor
+                    // navController.navigate("productor_detail/$productorId")
                 }
             )
         }

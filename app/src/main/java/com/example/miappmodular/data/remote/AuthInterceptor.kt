@@ -1,5 +1,7 @@
 package com.example.miappmodular.data.remote
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.example.miappmodular.data.local.SessionManager
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
@@ -15,63 +17,38 @@ import okhttp3.Response
  *
  * **Funcionamiento:**
  * 1. Intercepta todas las peticiones HTTP antes de enviarlas al servidor
- * 2. Recupera el authToken del SessionManager (si existe)
+ * 2. Recupera el authToken de SaborLocal SharedPreferences o SessionManager
  * 3. Añade el header `Authorization: Bearer {token}` si el token existe
  * 4. Permite que la petición continúe normalmente
  *
- * **Endpoints que requieren autenticación:**
- * - `GET /auth/me` - Obtener datos del usuario autenticado
- * - Cualquier endpoint futuro que requiera el token JWT
+ * **Prioridad de tokens:**
+ * 1. Primero intenta obtener el token de SaborLocal (SharedPreferences)
+ * 2. Si no existe, intenta obtener el token de SessionManager (DataStore)
  *
- * **Nota sobre runBlocking:**
- * Usamos `runBlocking` porque los interceptores de OkHttp no son funciones
- * suspendidas, pero necesitamos llamar a `getAuthToken()` que sí es suspend.
- * Esta es una práctica común y aceptada para interceptores que necesitan
- * acceder a datos asíncronos. El impacto en rendimiento es mínimo porque
- * DataStore usa caché en memoria.
- *
- * Ejemplo de uso (en RetrofitClient):
- * ```kotlin
- * val sessionManager = SessionManager(context)
- * val authInterceptor = AuthInterceptor(sessionManager)
- *
- * val okHttpClient = OkHttpClient.Builder()
- *     .addInterceptor(authInterceptor)
- *     .addInterceptor(loggingInterceptor)
- *     .build()
- * ```
- *
- * **Orden de interceptores:**
- * Es importante añadir AuthInterceptor ANTES de LoggingInterceptor
- * para que los logs muestren el header Authorization correctamente.
- *
- * **Alternativa sin runBlocking:**
- * Para evitar `runBlocking`, se podría:
- * 1. Mantener el token en memoria con Flow y collectAsState
- * 2. Usar un cache in-memory del token actualizado reactivamente
- * Esto añadiría complejidad sin beneficio significativo en este caso.
- *
- * @property sessionManager Gestor de sesión que proporciona el authToken.
+ * @property sessionManager Gestor de sesión que proporciona el authToken de Xano.
+ * @property context Contexto para acceder a SharedPreferences de SaborLocal.
  *
  * @see SessionManager
  * @see RetrofitClient
  * @see AuthApiService
  */
 class AuthInterceptor(
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val context: Context
 ) : Interceptor {
+
+    private val saborLocalPrefs: SharedPreferences by lazy {
+        context.getSharedPreferences("saborlocal_prefs", Context.MODE_PRIVATE)
+    }
 
     /**
      * Intercepta y modifica la petición HTTP para añadir autenticación.
      *
-     * Este método es llamado automáticamente por OkHttp antes de cada
-     * petición HTTP. No debe ser invocado manualmente.
-     *
      * **Flujo de ejecución:**
-     * 1. Obtiene el token del SessionManager (operación suspend)
-     * 2. Si existe token, crea una nueva petición con header Authorization
-     * 3. Si no hay token, deja la petición sin modificar
-     * 4. Procede con la petición (modificada o no) en la cadena de interceptores
+     * 1. Intenta obtener token de SaborLocal (SharedPreferences)
+     * 2. Si no existe, intenta obtener token de SessionManager (DataStore)
+     * 3. Si existe token, crea una nueva petición con header Authorization
+     * 4. Si no hay token, deja la petición sin modificar
      *
      * **Header generado:**
      * ```
@@ -80,15 +57,18 @@ class AuthInterceptor(
      *
      * @param chain Cadena de interceptores de OkHttp.
      * @return Response del servidor tras ejecutar la petición.
-     *
-     * @throws IOException Si hay error de red durante la petición.
      */
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Recuperar el token de forma síncrona usando runBlocking
-        val token = runBlocking {
-            sessionManager.getAuthToken()
+        // Intentar obtener token de SaborLocal primero
+        var token = saborLocalPrefs.getString("auth_token", null)
+
+        // Si no hay token de SaborLocal, intentar con SessionManager (Xano)
+        if (token.isNullOrEmpty()) {
+            token = runBlocking {
+                sessionManager.getAuthToken()
+            }
         }
 
         // Si no hay token, continuar con la petición original sin modificar
