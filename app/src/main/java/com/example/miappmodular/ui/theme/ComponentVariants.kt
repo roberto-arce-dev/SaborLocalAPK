@@ -21,13 +21,13 @@ sealed class ButtonVariant(
     object Outline : ButtonVariant(
         backgroundColor = Color.Transparent,
         contentColor = Foreground,
-        pressedColor = Slate100
+        pressedColor = PaleGray
     )
 
     object Ghost : ButtonVariant(
         backgroundColor = Color.Transparent,
         contentColor = Foreground,
-        pressedColor = Slate100
+        pressedColor = PaleGray
     )
 
     object Destructive : ButtonVariant(
@@ -37,9 +37,9 @@ sealed class ButtonVariant(
     )
 
     object Secondary : ButtonVariant(
-        backgroundColor = Slate100,
+        backgroundColor = Beige,
         contentColor = Foreground,
-        pressedColor = Slate200
+        pressedColor = LightBrown
     )
 }
 
@@ -65,7 +65,7 @@ sealed class BadgeVariant(
     val textColor: Color
 ) {
     object Default : BadgeVariant(
-        backgroundColor = Slate100,
+        backgroundColor = PaleGray,
         borderColor = Border,
         textColor = Foreground
     )

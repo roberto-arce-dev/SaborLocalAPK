@@ -1,15 +1,11 @@
 package com.example.miappmodular.ui.screens
 
-import android.Manifest
-import android.content.Context
-import android.net.Uri
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -17,676 +13,501 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
+import com.example.miappmodular.ui.theme.Primary
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.example.miappmodular.ui.components.*
-import com.example.miappmodular.ui.theme.*
+import com.example.miappmodular.model.User
+import com.example.miappmodular.ui.components.StandardScaffold
+import com.example.miappmodular.viewmodel.ProfileUiState
 import com.example.miappmodular.viewmodel.ProfileViewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 /**
- * Pantalla de perfil del usuario autenticado (Smart Component).
+ * Pantalla de perfil del usuario
  *
- * **Patrón Smart/Dumb Components:**
- * - **Smart (este)**: Maneja ProfileViewModel y estado reactivo
- * - **Dumb ([ProfileScreenContent])**: Solo UI pura con manejo de estados
+ * **Funcionalidades:**
+ * - Muestra información del usuario (nombre, email, rol, etc.)
+ * - Permite refrescar datos con pull-to-refresh
+ * - Botón de cerrar sesión
+ * - Navegación automática al login cuando se cierra sesión
  *
- * **Funcionalidad:**
- * - Muestra información completa del usuario autenticado
- * - Carga automática de datos en el init del ViewModel
- * - Botón de refresh para recargar perfil
- * - Navegación de regreso a pantalla anterior (HomeScreen)
- * - Manejo de 3 estados: Loading, Error, Success
- * - Diseño shadcn.io con avatar circular y cards
- *
- * **Datos mostrados:**
- * - Avatar: Icono Person en círculo Primary
- * - Nombre completo del usuario
- * - Email del usuario
- * - Fecha de registro (formato español: "enero 2024")
- * - Último acceso (formato: "dd/MM/yyyy HH:mm")
- *
- * **Estados manejados:**
- * - **Loading**: Muestra CircularProgressIndicator centrado
- * - **Error**: Card con mensaje de error y botón "Reintentar"
- * - **Success**: Muestra ProfileContent con datos del usuario
- *
- * **Inicialización automática:**
- * El ProfileViewModel carga los datos automáticamente en su bloque init,
- * por lo que no es necesario llamar manualmente a ningún método de carga.
- *
- * **Navegación:**
- * - Botón Atrás (TopBar) → Regresa a HomeScreen
- * - Botón Refresh (TopBar) → Recarga datos del perfil desde Room
- *
- * @param viewModel ViewModel que maneja la carga y estado del perfil (inyectado automáticamente).
- * @param onNavigateBack Callback para regresar a la pantalla anterior (típicamente HomeScreen).
- *
- * @see ProfileViewModel
- * @see ProfileScreenContent
- * @see com.example.miappmodular.repository.UserRepository.getCurrentUser
- * @see com.example.miappmodular.ui.navigation.AppNavigation
- */
-@Composable
-fun ProfileScreen(
-    viewModel: ProfileViewModel = viewModel(),
-    onNavigateBack: () -> Unit
-) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    ProfileScreenContent(
-        uiState = uiState,
-        onNavigateBack = onNavigateBack,
-        onRefresh = viewModel::refresh
-    )
-}
-
-/**
- * ProfileScreenContent (Presentational/Dumb Component).
- *
- * Componente de UI pura que renderiza la pantalla de perfil con manejo de estados.
- * No tiene dependencias del ViewModel, haciéndolo seguro para @Preview.
- *
- * **Arquitectura de UI:**
- * ```
- * Scaffold
- * ├── TopAppBar
- * │   ├── NavigationIcon: ArrowBack
- * │   ├── Title: "Perfil"
- * │   └── Actions: Refresh icon
- * └── Box (centered)
- *     ├── when (uiState.isLoading) → CircularProgressIndicator
- *     ├── when (uiState.error != null) → ErrorState card
- *     └── when (uiState.user != null) → ProfileContent
- * ```
- *
- * **Manejo de estados:**
- * - **isLoading = true**: Muestra CircularProgressIndicator centrado
- * - **error != null**: Muestra ErrorState con mensaje y botón "Reintentar"
- * - **user != null**: Muestra ProfileContent con avatar e información completa
- *
- * **Diseño shadcn.io:**
- * - TopAppBar: Material3 con Surface background
- * - Background: BackgroundSecondary para contraste
- * - Componentes: ErrorState y ProfileContent como subcomponentes
- *
- * **TopAppBar actions:**
- * - ArrowBack (left): Ejecuta onNavigateBack
- * - Refresh (right): Ejecuta onRefresh para recargar datos
- *
- * @param uiState Estado inmutable con datos del perfil, loading y errores.
- * @param onNavigateBack Callback para navegar hacia atrás.
- * @param onRefresh Callback para recargar los datos del perfil.
- *
- * @see ProfileUiState
- * @see ErrorState
- * @see ProfileContent
+ * @param viewModel ViewModel del perfil
+ * @param onNavigateBack Callback para volver atrás
+ * @param onLogout Callback cuando el usuario cierra sesión
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreenContent(
-    uiState: com.example.miappmodular.viewmodel.ProfileUiState,
+fun ProfileScreen(
+    viewModel: ProfileViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onRefresh: () -> Unit
+    onLogout: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Perfil",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = Foreground
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Foreground
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onRefresh) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = "Actualizar",
-                            tint = Foreground
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Surface
-                )
-            )
+    val uiState by viewModel.uiState.collectAsState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    // Navegar automáticamente al login cuando se cierra sesión
+    LaunchedEffect(uiState) {
+        if (uiState is ProfileUiState.LoggedOut) {
+            onLogout()
         }
+    }
+
+    StandardScaffold(
+        title = "Mi Perfil",
+        onNavigateBack = onNavigateBack,
+        actionIcon = Icons.Default.Refresh,
+        onActionClick = { viewModel.refreshProfile() },
+        containerColor = Color(0xFFF8F9FA) // Fondo claro
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundSecondary)
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
+                .padding(paddingValues)
         ) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(
-                        color = Primary
-                    )
+            when (val state = uiState) {
+                is ProfileUiState.Loading -> {
+                    LoadingContent()
                 }
-                uiState.error != null -> {
-                    ErrorState(
-                        error = uiState.error,
-                        onRetry = onRefresh
-                    )
-                }
-                uiState.user != null -> {
+
+                is ProfileUiState.Success -> {
                     ProfileContent(
-                        uiState = uiState,
-                        onRefresh = onRefresh
+                        user = state.user,
+                        onLogoutClick = { showLogoutDialog = true }
                     )
+                }
+
+                is ProfileUiState.Error -> {
+                    ErrorContent(
+                        message = state.message,
+                        onRetry = { viewModel.refreshProfile() },
+                        onLogout = { showLogoutDialog = true }
+                    )
+                }
+
+                is ProfileUiState.LoggedOut -> {
+                    // Estado transitorio - se navega automáticamente en LaunchedEffect
                 }
             }
         }
     }
-}
 
-/**
- * Componente de estado de error reutilizable con diseño shadcn.io.
- *
- * Muestra un mensaje de error amigable al usuario con opción de reintentar
- * la operación fallida. Diseñado para ser usado cuando la carga de datos
- * del perfil falla (ej: usuario no encontrado, error de base de datos).
- *
- * **Diseño:**
- * - Card centrado con padding 24.dp
- * - Icono Error grande (64.dp) en color Destructive (rojo)
- * - Título "Error" en headlineSmall Bold
- * - Mensaje de error descriptivo en bodyMedium Muted
- * - Botón "Reintentar" en ButtonVariant.Default (Primary)
- *
- * **Casos de uso:**
- * - Error al cargar perfil desde Room (usuario no encontrado)
- * - Error de base de datos (SQLite exception)
- * - Timeout en operaciones de lectura
- * - Cualquier error recuperable mediante retry
- *
- * **UX:**
- * El mensaje de error debe ser descriptivo y en español para que el usuario
- * entienda qué salió mal (ej: "No se encontró el usuario", "Error al cargar el perfil").
- *
- * @param error Mensaje de error descriptivo a mostrar al usuario.
- * @param onRetry Callback ejecutado al presionar el botón "Reintentar".
- *
- * @see ShadcnCard
- * @see ShadcnButton
- * @see ProfileScreenContent
- */
-@Composable
-private fun ErrorState(
-    error: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(24.dp)
-    ) {
-        ShadcnCard(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = 1.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Error,
-                    contentDescription = null,
-                    tint = Destructive,
-                    modifier = Modifier.size(64.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Error",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Foreground
+    // Diálogo de confirmación para cerrar sesión
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Estás seguro de que deseas cerrar sesión?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        viewModel.logout()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
                     )
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = ForegroundMuted
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                ShadcnButton(
-                    onClick = onRetry,
-                    text = "Reintentar",
-                    variant = ButtonVariant.Default,
-                    size = ButtonSize.Default,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-}
-
-/**
- * Componente de contenido principal del perfil con diseño shadcn.io.
- *
- * Renderiza la información completa del usuario cuando la carga es exitosa.
- * Incluye funcionalidad de selección de avatar desde cámara o galería.
- *
- * **Funcionalidad de avatar:**
- * - Avatar clickeable que abre diálogo de selección
- * - Opción de tomar foto con cámara (requiere permiso CAMERA)
- * - Opción de seleccionar de galería (requiere permiso READ_MEDIA_IMAGES)
- * - Muestra imagen seleccionada usando Coil o icono por defecto
- * - Icono de cámara en esquina inferior derecha del avatar
- *
- * **Manejo de permisos:**
- * - Solicita permisos antes de abrir cámara o galería
- * - Muestra Snackbar si los permisos son denegados
- * - Compatible con permisos de Android 13+ y versiones anteriores
- *
- * **Activity Result Contracts:**
- * - TakePicture: Captura foto usando la cámara
- * - GetContent: Selecciona imagen de galería
- * - FileProvider: Crea URIs seguros para archivos de cámara
- *
- * @param uiState Estado con User completo, formattedCreatedAt y avatarUri.
- * @param onRefresh Callback para recargar datos (no usado actualmente).
- *
- * @see ProfileItem
- * @see ImagePickerDialog
- * @see com.example.miappmodular.viewmodel.ProfileViewModel.updateAvatar
- */
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-private fun ProfileContent(
-    uiState: com.example.miappmodular.viewmodel.ProfileUiState,
-    onRefresh: () -> Unit
-) {
-    val context = LocalContext.current
-    val viewModel: ProfileViewModel = viewModel()
-    var showImagePicker by remember { mutableStateOf(false) }
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    // Definir los permisos según la versión de Android
-    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        listOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_MEDIA_IMAGES
-        )
-    } else {
-        listOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        )
-    }
-
-    val permissionsState = rememberMultiplePermissionsState(permissions)
-
-    // Launcher para capturar foto con cámara
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success && tempCameraUri != null) {
-            viewModel.updateAvatar(tempCameraUri)
-        }
-    }
-
-    // Launcher para seleccionar imagen de galería
-    val pickImageLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            viewModel.updateAvatar(it)
-        }
-    }
-
-    // Mostrar el diálogo de selección de imagen
-    if (showImagePicker) {
-        ImagePickerDialog(
-            onDismiss = { showImagePicker = false },
-            onCameraClick = {
-                showImagePicker = false
-                if (permissionsState.permissions.any { it.permission == Manifest.permission.CAMERA && it.status.isGranted }) {
-                    // Crear archivo temporal para la foto
-                    tempCameraUri = createImageUri(context)
-                    tempCameraUri?.let { takePictureLauncher.launch(it) }
-                } else {
-                    // Solicitar permiso de cámara
-                    permissionsState.launchMultiplePermissionRequest()
+                ) {
+                    Text("Cerrar sesión")
                 }
             },
-            onGalleryClick = {
-                showImagePicker = false
-                val imagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_IMAGES
-                } else {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                }
-
-                if (permissionsState.permissions.any { it.permission == imagePermission && it.status.isGranted }) {
-                    // Lanzar selector de galería
-                    pickImageLauncher.launch("image/*")
-                } else {
-                    // Solicitar permiso de almacenamiento
-                    permissionsState.launchMultiplePermissionRequest()
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar")
                 }
             }
         )
     }
+}
 
-    Box(modifier = Modifier.fillMaxSize()) {
+@Composable
+private fun LoadingContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Avatar Card
-            ShadcnCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = 1.dp
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Cargando perfil...",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorContent(
+    message: String,
+    onRetry: () -> Unit,
+    onLogout: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Icon(
+                Icons.Default.ErrorOutline,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.error
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Error al cargar perfil",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onRetry,
+                modifier = Modifier.fillMaxWidth(0.7f)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Avatar Circle con imagen o icono
-                    Box(
-                        modifier = Modifier.size(120.dp),
-                        contentAlignment = Alignment.BottomEnd
-                    ) {
-                        // Avatar principal
-                        if (uiState.avatarUri != null) {
-                            // Mostrar imagen seleccionada con Coil
-                            AsyncImage(
-                                model = uiState.avatarUri,
-                                contentDescription = "Avatar del usuario",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(CircleShape)
-                                    .clickable { showImagePicker = true }
-                                    .background(Primary),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            // Mostrar icono por defecto
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { showImagePicker = true },
-                                shape = CircleShape,
-                                color = Primary
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Person,
-                                    contentDescription = "Seleccionar avatar",
-                                    tint = androidx.compose.ui.graphics.Color.White,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(28.dp)
-                                )
-                            }
-                        }
+                Icon(Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Reintentar")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth(0.7f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Outlined.Logout, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Cerrar Sesión")
+            }
+        }
+    }
+}
 
-                        // Icono de cámara en esquina
-                        Surface(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clickable { showImagePicker = true },
-                            shape = CircleShape,
-                            color = Surface,
-                            shadowElevation = 2.dp
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.CameraAlt,
-                                contentDescription = "Cambiar foto",
-                                tint = Primary,
-                                modifier = Modifier.padding(8.dp)
-                            )
-                        }
-                    }
+@Composable
+private fun ProfileContent(
+    user: User,
+    onLogoutClick: () -> Unit
+) {
+    // Estados editables
+    var nombre by remember { mutableStateOf(user.nombre ?: "") }
+    var telefono by remember { mutableStateOf(user.telefono ?: "") }
+    var direccion by remember { mutableStateOf(user.direccion ?: "") }
+    var showSaveMessage by remember { mutableStateOf(false) }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // User Name
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Avatar Grande con botón de cambiar foto
+        Box(
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.BottomEnd
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(120.dp)
+                    .border(4.dp, Color.White, CircleShape)
+                    .shadow(4.dp, CircleShape),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary
+            ) {
+                Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = uiState.user?.name ?: "",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Foreground
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // User Email
-                    Text(
-                        text = uiState.user?.email ?: "",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = ForegroundMuted
-                        )
+                        text = getInitials(nombre.ifEmpty { "Usuario" }),
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // User Information Card
-            ShadcnCard(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = 1.dp
+            // Botón "Change Photo"
+            Surface(
+                onClick = { /* TODO: Implementar cambio de foto */ },
+                modifier = Modifier.size(36.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 4.dp
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp)
-                ) {
-                    Text(
-                        text = "Información",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = Foreground
-                        )
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Cambiar foto",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    ProfileItem(
-                        icon = Icons.Filled.Person,
-                        label = "Nombre completo",
-                        value = uiState.user?.name ?: ""
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    ShadcnDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    ProfileItem(
-                        icon = Icons.Filled.Email,
-                        label = "Correo electrónico",
-                        value = uiState.user?.email ?: ""
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    ShadcnDivider()
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    ProfileItem(
-                        icon = Icons.Filled.CalendarToday,
-                        label = "Miembro desde",
-                        value = uiState.formattedCreatedAt
-                    )
-
-                    uiState.user?.lastLogin?.let { lastLogin ->
-                        Spacer(modifier = Modifier.height(12.dp))
-                        ShadcnDivider()
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        ProfileItem(
-                            icon = Icons.Filled.AccessTime,
-                            label = "Último acceso",
-                            value = SimpleDateFormat(
-                                "dd/MM/yyyy HH:mm",
-                                Locale("es", "ES")
-                            ).format(lastLogin)
-                        )
-                    }
                 }
             }
         }
 
-        // Snackbar para mensajes de permisos
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Texto "Cambiar Foto"
+        TextButton(onClick = { /* TODO */ }) {
+            Text(
+                text = "Cambiar Foto",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Rol (solo lectura)
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        ) {
+            Text(
+                text = getRoleName(user.role),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Campos Editables
+        Column(
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Campo Nombre
+            OutlinedTextField(
+                value = nombre,
+                onValueChange = { nombre = it },
+                label = { Text("Nombre") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(Icons.Default.Person, contentDescription = null)
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color(0xFFE0E0E0)
+                )
+            )
+
+            // Campo Email (solo lectura)
+            OutlinedTextField(
+                value = user.email,
+                onValueChange = { },
+                label = { Text("Correo Electrónico") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = false,
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = null)
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = Color(0xFFE0E0E0),
+                    disabledTextColor = Color(0xFF666666)
+                )
+            )
+
+            // Campo Teléfono
+            OutlinedTextField(
+                value = telefono,
+                onValueChange = { telefono = it },
+                label = { Text("Teléfono") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(Icons.Default.Phone, contentDescription = null)
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color(0xFFE0E0E0)
+                )
+            )
+
+            // Campo Dirección
+            OutlinedTextField(
+                value = direccion,
+                onValueChange = { direccion = it },
+                label = { Text("Dirección") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(Icons.Default.LocationOn, contentDescription = null)
+                },
+                shape = RoundedCornerShape(12.dp),
+                minLines = 2,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color(0xFFE0E0E0)
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Mensaje de guardado
+        if (showSaveMessage) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Text(
+                    text = "✓ Cambios guardados localmente. ¡Pronto se sincronizarán con el servidor!",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Botón Guardar Cambios
+        Button(
+            onClick = {
+                // TODO: Implementar guardado cuando exista endpoint PATCH /api/auth/profile
+                showSaveMessage = true
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(Icons.Default.Save, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Guardar Cambios",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Botón de cerrar sesión (Estilo Outline Rojo)
+        OutlinedButton(
+            onClick = onLogoutClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(Icons.Outlined.Logout, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Cerrar Sesión",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        // Espacio para el nav bar
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
-/**
- * Crea un URI temporal para guardar la foto capturada por la cámara.
- *
- * Utiliza FileProvider para crear un URI seguro que puede ser compartido
- * con la aplicación de cámara. El archivo se crea en el directorio Pictures
- * del almacenamiento externo de la aplicación.
- *
- * **Patrón de nombres:**
- * - Formato: "profile_avatar_YYYYMMDD_HHmmss.jpg"
- * - Ejemplo: "profile_avatar_20240115_143025.jpg"
- *
- * **Ubicación:**
- * - context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
- * - No requiere permisos de almacenamiento en Android 10+
- *
- * @param context Contexto de la aplicación
- * @return Uri del archivo temporal, o null si hay error
- */
-private fun createImageUri(context: Context): Uri? {
-    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-    val imageFileName = "profile_avatar_$timeStamp.jpg"
-    val storageDir = context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
-
-    return try {
-        val imageFile = File(storageDir, imageFileName)
-        FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            imageFile
-        )
-    } catch (e: Exception) {
-        null
-    }
-}
-
-/**
- * Item de información de perfil reutilizable con diseño shadcn.io.
- *
- * Componente presentacional que muestra un campo de información del usuario
- * con un icono, etiqueta y valor. Usado para crear listas de información
- * estructuradas y consistentes.
- *
- * **Diseño:**
- * - Layout horizontal: Icono (left) + Column (label + value)
- * - Icono: 20.dp, color Primary
- * - Label: labelMedium, ForegroundMuted, Medium weight (etiqueta descriptiva)
- * - Value: bodyMedium, Foreground, Normal weight (valor destacado)
- * - Spacing: 12.dp horizontal, 4.dp vertical entre label y value
- *
- * **Patrón de diseño:**
- * Este componente implementa el patrón "Label-Value Pair" común en perfiles
- * y formularios de solo lectura. El icono proporciona contexto visual rápido.
- *
- * **Ejemplo de uso:**
- * ```kotlin
- * ProfileItem(
- *     icon = Icons.Filled.Email,
- *     label = "Correo electrónico",
- *     value = "user@example.com"
- * )
- * ```
- *
- * **Casos de uso comunes:**
- * - Información de perfil (nombre, email, teléfono)
- * - Fechas (registro, último acceso, cumpleaños)
- * - Configuraciones (idioma, zona horaria, preferencias)
- * - Cualquier par label-value que necesite representación consistente
- *
- * **Accesibilidad:**
- * El icono tiene contentDescription = null porque es decorativo. La información
- * semántica está en el label y value que sí son leídos por lectores de pantalla.
- *
- * @param icon Icono Material que representa el tipo de información.
- * @param label Etiqueta descriptiva del campo (ej: "Nombre completo").
- * @param value Valor del campo a mostrar (ej: "Juan Pérez").
- *
- * @see ProfileContent
- */
 @Composable
-private fun ProfileItem(
+private fun ProfileInfoItem(
     icon: ImageVector,
     label: String,
     value: String
 ) {
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        shadowElevation = 2.dp
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Primary,
-            modifier = Modifier.size(20.dp)
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(
-            modifier = Modifier.weight(1f)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    color = ForegroundMuted,
-                    fontWeight = FontWeight.Medium
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFF5F5F5),
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color(0xFF1A1A1A),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.Gray
                 )
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Foreground,
-                    fontWeight = FontWeight.Normal
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF1A1A1A)
                 )
-            )
+            }
         }
+    }
+}
+
+/**
+ * Obtiene las iniciales del nombre (máximo 2 caracteres)
+ */
+private fun getInitials(nombre: String): String {
+    val parts = nombre.trim().split(" ")
+    return when {
+        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
+        parts.size == 1 -> parts[0].take(2).uppercase()
+        else -> "?"
+    }
+}
+
+/**
+ * Convierte el rol a un nombre legible
+ */
+private fun getRoleName(role: String): String {
+    return when (role.uppercase()) {
+        "ADMIN" -> "Administrador"
+        "PRODUCTOR" -> "Productor"
+        "CLIENTE" -> "Cliente"
+        else -> role
     }
 }

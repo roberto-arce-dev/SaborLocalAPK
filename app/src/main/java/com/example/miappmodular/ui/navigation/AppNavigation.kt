@@ -58,8 +58,30 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = "splash"
     ) {
+        /**
+         * Ruta: splash
+         *
+         * Pantalla inicial que verifica si hay una sesión activa.
+         * - Si hay token válido → Navega a home
+         * - Si no hay token → Navega a login
+         */
+        composable("splash") {
+            SplashScreen(
+                onNavigateToHome = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
+        }
+
         /**
          * Ruta: login
          *
@@ -91,7 +113,7 @@ fun AppNavigation() {
          */
         composable("register") {
             RegisterScreen(
-                onNavigateBack = {
+                onNavigateToLogin = {
                     navController.navigateUp()
                 },
                 onRegisterSuccess = {
@@ -105,40 +127,19 @@ fun AppNavigation() {
         /**
          * Ruta: home
          *
-         * Pantalla principal de la app (dashboard). Muestra:
-         * - Estadísticas de usuarios
-         * - Grid de módulos/features
-         * - Botones de perfil y logout
+         * Pantalla principal con Bottom Navigation Bar.
+         * Contiene 5 tabs: Inicio, Productos, Carrito, Pedidos, Perfil.
          *
          * Solo accesible tras autenticación exitosa.
          */
         composable("home") {
-            HomeScreen(
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
+            MainScreen(
                 onLogout = {
+                    // Navegar al login y limpiar todo el backstack
                     navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
-                }
-            )
-        }
-
-        /**
-         * Ruta: profile
-         *
-         * Pantalla de perfil del usuario. Muestra:
-         * - Datos del usuario (nombre, email)
-         * - Fecha de registro
-         * - Último acceso
-         *
-         * Navegación estándar, permite volver a home con navigateUp().
-         */
-        composable("profile") {
-            ProfileScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
                 }
             )
         }

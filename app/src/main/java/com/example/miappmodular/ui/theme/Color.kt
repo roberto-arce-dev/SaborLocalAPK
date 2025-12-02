@@ -2,54 +2,194 @@ package com.example.miappmodular.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Paleta shadcn.io - Slate (Neutrales)
-val Slate50 = Color(0xFFF8FAFC)
-val Slate100 = Color(0xFFF1F5F9)
-val Slate200 = Color(0xFFE2E8F0)
-val Slate300 = Color(0xFFCBD5E1)
-val Slate400 = Color(0xFF94A3B8)
-val Slate500 = Color(0xFF64748B)
-val Slate600 = Color(0xFF475569)
-val Slate700 = Color(0xFF334155)
-val Slate800 = Color(0xFF1E293B)
-val Slate900 = Color(0xFF0F172A)
-val Slate950 = Color(0xFF020617)
+/**
+ * Paleta de colores SaborLocal - Inspirada en productos frescos y locales
+ *
+ * **Filosofía del diseño:**
+ * - Verde: Productos frescos, orgánicos, sostenibles
+ * - Naranja/Terracota: Calidez, comunidad local, energía
+ * - Crema/Beige: Natural, artesanal, acogedor
+ * - Marrones tierra: Rústico, auténtico, de la tierra
+ *
+ * **Psicología del color:**
+ * - Verde → Naturaleza, frescura, confianza, salud
+ * - Naranja → Energía, entusiasmo, accesibilidad
+ * - Crema → Calidez, confort, simplicidad
+ * - Tierra → Estabilidad, autenticidad, conexión con la tierra
+ */
 
-// Colores de acento - Estilo shadcn (azul neutro)
-val Primary = Color(0xFF0F172A) // slate-900
-val PrimaryLight = Color(0xFF1E293B) // slate-800
-val Accent = Color(0xFF3B82F6) // blue-500
-val AccentHover = Color(0xFF2563EB) // blue-600
+// ========= Verdes (Frescura y Naturaleza) =========
 
-// Backgrounds
-val Background = Color(0xFFFFFFFF)
-val BackgroundSecondary = Slate50
+/** Verde bosque profundo - Color principal de la marca */
+val ForestGreen = Color(0xFF2D6A4F)
+
+/** Verde hoja - Para hover states y acentos */
+val LeafGreen = Color(0xFF40916C)
+
+/** Verde menta - Para containers y fondos suaves */
+val MintGreen = Color(0xFF52B788)
+
+/** Verde claro - Para fondos y superficies */
+val LightGreen = Color(0xFFD8F3DC)
+
+/** Verde muy claro - Para fondos secundarios */
+val PaleGreen = Color(0xFFF1FAF5)
+
+// ========= Azules Suaves (Acento Secundario) =========
+
+/** Azul suave - Color secundario principal */
+val SoftBlue = Color(0xFF4A90E2)
+
+/** Azul cielo - Para hover y acentos */
+val SkyBlue = Color(0xFF5BA3F5)
+
+/** Azul claro - Para fondos secundarios */
+val LightBlue = Color(0xFFE3F2FD)
+
+// ========= Cremas y Neutros Cálidos =========
+
+/** Crema natural - Fondo principal */
+val CreamBackground = Color(0xFFFFFBF5)
+
+/** Crema medio - Para cards y surfaces */
+val CreamSurface = Color(0xFFFFF8F0)
+
+/** Beige suave - Para variantes */
+val Beige = Color(0xFFF5EFE6)
+
+// ========= Marrones Tierra (Autenticidad) =========
+
+/** Marrón tierra - Para textos y acentos oscuros */
+val EarthBrown = Color(0xFF6B4423)
+
+/** Marrón medio - Para textos secundarios */
+val MediumBrown = Color(0xFF8B6F47)
+
+/** Marrón claro - Para borders sutiles */
+val LightBrown = Color(0xFFD4C4B0)
+
+// ========= Grises Neutros (Balance) =========
+
+/** Gris carbón - Para textos principales */
+val CharcoalGray = Color(0xFF2B2D31)
+
+/** Gris medio - Para textos secundarios */
+val MediumGray = Color(0xFF6C757D)
+
+/** Gris claro - Para borders */
+val LightGray = Color(0xFFE9ECEF)
+
+/** Gris muy claro - Para fondos */
+val PaleGray = Color(0xFFF8F9FA)
+
+// ========= Estados Semánticos =========
+
+/** Éxito - Verde menta (producto disponible) */
+val Success = MintGreen
+
+/** Éxito claro - Fondo para estados exitosos */
+val SuccessLight = LightGreen
+
+/** Error - Rojo tomate (producto agotado, error) */
+val Destructive = Color(0xFFDC3545)
+
+/** Error claro - Fondo para errores */
+val DestructiveLight = Color(0xFFFFF0F0)
+
+/** Advertencia - Amarillo (stock bajo) */
+val Warning = Color(0xFFFFA726)
+
+/** Advertencia claro - Fondo para advertencias */
+val WarningLight = Color(0xFFFFF3E0)
+
+/** Info - Azul cielo (información general) */
+val Info = Color(0xFF4A90E2)
+
+/** Info claro - Fondo para información */
+val InfoLight = Color(0xFFE3F2FD)
+
+// ========= Colores Principales del Tema =========
+
+/** Color primario - Verde bosque (botones principales, links) */
+val Primary = ForestGreen
+
+/** Primary hover - Verde hoja (hover en botones) */
+val PrimaryHover = LeafGreen
+
+/** Primary light - Para containers primarios */
+val PrimaryLight = MintGreen
+
+/** Color de acento - Azul suave (CTAs, destacados) */
+val Accent = SoftBlue
+
+/** Accent hover - Azul cielo (hover en accent) */
+val AccentHover = SkyBlue
+
+// ========= Backgrounds =========
+
+/** Fondo principal - Blanco casi puro */
+val Background = Color(0xFFF8F9FA) // GhostWhite
+
+/** Fondo secundario - Blanco puro */
+val BackgroundSecondary = Color(0xFFFFFFFF)
+
+/** Surface - Blanco puro para cards elevados */
 val Surface = Color(0xFFFFFFFF)
-val SurfaceVariant = Slate100
 
-// Borders - Sutiles como shadcn
-val Border = Slate200
-val BorderFocus = Slate400
+/** Surface variant - Blanco puro */
+val SurfaceVariant = Color(0xFFFFFFFF)
 
-// Text colors - Jerarquía clara
-val Foreground = Slate950
-val ForegroundMuted = Slate500
-val ForegroundSubtle = Slate400
+// ========= Borders =========
 
-// Estados semánticos - Colores sutiles
-val Destructive = Color(0xFFEF4444) // red-500
-val DestructiveLight = Color(0xFFFEE2E2) // red-100
-val Success = Color(0xFF22C55E) // green-500
-val SuccessLight = Color(0xFFDCFCE7) // green-100
-val Warning = Color(0xFFF59E0B) // amber-500
-val WarningLight = Color(0xFFFEF3C7) // amber-100
-val Info = Color(0xFF3B82F6) // blue-500
-val InfoLight = Color(0xFFDBEAFE) // blue-100
+/** Border principal - Marrón claro sutil */
+val Border = LightBrown
 
-// Muted (backgrounds para elementos deshabilitados)
-val Muted = Slate100
-val MutedForeground = Slate500
+/** Border en focus - Verde hoja */
+val BorderFocus = LeafGreen
 
-// Ring (focus rings estilo shadcn)
-val Ring = Slate950
-val RingOffset = Color(0xFFFFFFFF)
+// ========= Textos =========
+
+/** Texto principal - Gris carbón */
+val Foreground = CharcoalGray
+
+/** Texto secundario - Gris medio */
+val ForegroundMuted = MediumGray
+
+/** Texto sutil - Para hints */
+val ForegroundSubtle = LightGray
+
+// ========= Muted (Deshabilitados) =========
+
+/** Fondo muted - Beige */
+val Muted = Beige
+
+/** Texto muted - Gris medio */
+val MutedForeground = MediumGray
+
+// ========= Focus Ring =========
+
+/** Ring de focus - Verde bosque */
+val Ring = ForestGreen
+
+/** Ring offset - Fondo */
+val RingOffset = Background
+
+// ========= Colores Específicos de SaborLocal =========
+
+/** Verde para productos orgánicos certificados */
+val OrganicGreen = MintGreen
+
+/** Naranja para productos artesanales */
+val ArtisanalOrange = Color(0xFFFFA726)
+
+/** Marrón para productos de granja */
+val FarmBrown = EarthBrown
+
+/** Verde para "Disponible" */
+val AvailableGreen = Success
+
+/** Rojo para "Agotado" */
+val OutOfStockRed = Destructive
+
+/** Amarillo para "Stock Bajo" */
+val LowStockYellow = Warning

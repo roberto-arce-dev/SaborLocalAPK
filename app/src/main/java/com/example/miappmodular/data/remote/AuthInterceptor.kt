@@ -1,7 +1,6 @@
 package com.example.miappmodular.data.remote
 
-import com.example.miappmodular.data.local.SessionManager
-import kotlinx.coroutines.runBlocking
+import com.example.miappmodular.data.local.TokenManager
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -15,63 +14,32 @@ import okhttp3.Response
  *
  * **Funcionamiento:**
  * 1. Intercepta todas las peticiones HTTP antes de enviarlas al servidor
- * 2. Recupera el authToken del SessionManager (si existe)
+ * 2. Recupera el authToken de TokenManager (EncryptedSharedPreferences)
  * 3. Añade el header `Authorization: Bearer {token}` si el token existe
  * 4. Permite que la petición continúe normalmente
  *
- * **Endpoints que requieren autenticación:**
- * - `GET /auth/me` - Obtener datos del usuario autenticado
- * - Cualquier endpoint futuro que requiera el token JWT
+ * **¿Por qué TokenManager es sincrónico?**
+ * - Los interceptores de OkHttp se ejecutan en threads de red
+ * - No pueden usar suspend functions sin bloquear el thread pool
+ * - TokenManager usa EncryptedSharedPreferences (sincrónico) en lugar de DataStore (async)
+ * - Esto evita `runBlocking()` que degradaría el rendimiento de red
  *
- * **Nota sobre runBlocking:**
- * Usamos `runBlocking` porque los interceptores de OkHttp no son funciones
- * suspendidas, pero necesitamos llamar a `getAuthToken()` que sí es suspend.
- * Esta es una práctica común y aceptada para interceptores que necesitan
- * acceder a datos asíncronos. El impacto en rendimiento es mínimo porque
- * DataStore usa caché en memoria.
+ * @property tokenManager Gestor de tokens JWT inyectado por Hilt
  *
- * Ejemplo de uso (en RetrofitClient):
- * ```kotlin
- * val sessionManager = SessionManager(context)
- * val authInterceptor = AuthInterceptor(sessionManager)
- *
- * val okHttpClient = OkHttpClient.Builder()
- *     .addInterceptor(authInterceptor)
- *     .addInterceptor(loggingInterceptor)
- *     .build()
- * ```
- *
- * **Orden de interceptores:**
- * Es importante añadir AuthInterceptor ANTES de LoggingInterceptor
- * para que los logs muestren el header Authorization correctamente.
- *
- * **Alternativa sin runBlocking:**
- * Para evitar `runBlocking`, se podría:
- * 1. Mantener el token en memoria con Flow y collectAsState
- * 2. Usar un cache in-memory del token actualizado reactivamente
- * Esto añadiría complejidad sin beneficio significativo en este caso.
- *
- * @property sessionManager Gestor de sesión que proporciona el authToken.
- *
- * @see SessionManager
- * @see RetrofitClient
- * @see AuthApiService
+ * @see TokenManager
+ * @see NetworkModule
  */
 class AuthInterceptor(
-    private val sessionManager: SessionManager
+    private val tokenManager: TokenManager
 ) : Interceptor {
 
     /**
      * Intercepta y modifica la petición HTTP para añadir autenticación.
      *
-     * Este método es llamado automáticamente por OkHttp antes de cada
-     * petición HTTP. No debe ser invocado manualmente.
-     *
      * **Flujo de ejecución:**
-     * 1. Obtiene el token del SessionManager (operación suspend)
+     * 1. Obtiene el token JWT de TokenManager (operación sincrónica)
      * 2. Si existe token, crea una nueva petición con header Authorization
      * 3. Si no hay token, deja la petición sin modificar
-     * 4. Procede con la petición (modificada o no) en la cadena de interceptores
      *
      * **Header generado:**
      * ```
@@ -80,16 +48,12 @@ class AuthInterceptor(
      *
      * @param chain Cadena de interceptores de OkHttp.
      * @return Response del servidor tras ejecutar la petición.
-     *
-     * @throws IOException Si hay error de red durante la petición.
      */
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
 
-        // Recuperar el token de forma síncrona usando runBlocking
-        val token = runBlocking {
-            sessionManager.getAuthToken()
-        }
+        // Obtener token de TokenManager (sincrónico, no bloquea threads)
+        val token = tokenManager.getToken()
 
         // Si no hay token, continuar con la petición original sin modificar
         if (token.isNullOrEmpty()) {
@@ -102,6 +66,22 @@ class AuthInterceptor(
             .build()
 
         // Continuar con la petición autenticada
-        return chain.proceed(authenticatedRequest)
+        val response = chain.proceed(authenticatedRequest)
+
+        // Verificar si el token ha expirado o es inválido (401 Unauthorized)
+        // IMPORTANTE: Solo limpiamos el token si NO es un endpoint de autenticación
+        // (login/register pueden retornar 401 por credenciales inválidas, no token expirado)
+        if (response.code == 401) {
+            val requestPath = originalRequest.url.encodedPath
+            val isAuthEndpoint = requestPath.contains("/login") ||
+                                requestPath.contains("/register")
+
+            if (!isAuthEndpoint) {
+                // Token expirado/inválido en endpoint protegido → forzar re-login
+                tokenManager.clearToken()
+            }
+        }
+
+        return response
     }
 }

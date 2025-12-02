@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import com.example.miappmodular.data.remote.RetrofitClient
 import com.example.miappmodular.ui.navigation.AppNavigation
 import com.example.miappmodular.ui.theme.MiAppModularTheme
@@ -16,19 +17,21 @@ import com.example.miappmodular.ui.theme.MiAppModularTheme
  *
  * Esta actividad es el contenedor raíz que aloja toda la UI de Jetpack Compose.
  * No contiene lógica de negocio ni UI específica, solo inicializa:
- * 1. El tema Material3 de la app ([MiAppModularTheme])
- * 2. El grafo de navegación ([AppNavigation])
+ * 1. RetrofitClient (para configuración de red)
+ * 2. El tema Material3 de la app ([MiAppModularTheme])
+ * 3. El grafo de navegación ([AppNavigation])
  *
- * **Arquitectura:**
+ * **Arquitectura simple:**
  * ```
  * MainActivity (Activity)
+ *   └── RetrofitClient.initialize(context)  ← Inicializa TokenManager
  *   └── MiAppModularTheme (Material3 Theme)
  *       └── Surface (Background container)
  *           └── AppNavigation (NavHost)
- *               ├── LoginScreen
- *               ├── RegisterScreen
- *               ├── HomeScreen
- *               └── ProfileScreen
+ *               ├── LoginScreen → LoginViewModel
+ *               ├── RegisterScreen → RegisterViewModel
+ *               ├── HomeScreen → ...
+ *               └── ProfileScreen → ...
  * ```
  *
  * **Configuración en AndroidManifest.xml:**
@@ -46,9 +49,11 @@ import com.example.miappmodular.ui.theme.MiAppModularTheme
  *
  * **Ciclo de vida:**
  * - `onCreate()` se llama una vez al crear la actividad
+ * - Inicializa RetrofitClient con el contexto (para TokenManager)
  * - `setContent {}` establece la UI Compose (reemplaza setContentView en XML)
  * - La navegación y estado se manejan mediante Compose Navigation y ViewModels
  *
+ * @see RetrofitClient
  * @see MiAppModularTheme
  * @see AppNavigation
  */
@@ -57,11 +62,15 @@ class MainActivity : ComponentActivity() {
     /**
      * Punto de entrada del ciclo de vida de la actividad.
      *
-     * Inicializa la UI Compose con:
-     * - RetrofitClient para configuración de red
-     * - Tema Material3 personalizado
-     * - Surface con color de fondo del tema
-     * - Sistema de navegación de la app
+     * Inicializa:
+     * 1. **RetrofitClient** - Configura TokenManager para gestión segura de tokens
+     * 2. **Tema Material3** personalizado
+     * 3. **Surface** con color de fondo del tema
+     * 4. **Sistema de navegación** de la app
+     *
+     * **IMPORTANTE:**
+     * RetrofitClient.initialize() debe llamarse ANTES de setContent {}
+     * porque los ViewModels pueden necesitar acceder al TokenManager.
      *
      * @param savedInstanceState Estado guardado de la actividad (null en primera ejecución).
      */
@@ -69,9 +78,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // Inicializar RetrofitClient con el contexto de la aplicación
-        // IMPORTANTE: Esto debe hacerse ANTES de setContent {} para que
-        // SessionManager esté disponible cuando se creen los ViewModels
+        // Esto configura TokenManager (EncryptedSharedPreferences) para tokens seguros
         RetrofitClient.initialize(this)
+
+        // Configurar barras del sistema ANTES de setContent
+        window.statusBarColor = android.graphics.Color.WHITE
+        window.navigationBarColor = android.graphics.Color.WHITE
+
+        // Iconos oscuros en las barras (para fondo blanco)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
 
         setContent {
             MiAppModularTheme {

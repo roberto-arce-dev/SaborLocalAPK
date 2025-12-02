@@ -3,216 +3,215 @@ package com.example.miappmodular.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.miappmodular.AppDependencies
-import com.example.miappmodular.repository.UserRepository
-import com.example.miappmodular.utils.ValidationUtils
+import com.example.miappmodular.model.ApiResult
+import com.example.miappmodular.model.User
+import com.example.miappmodular.repository.AuthSaborLocalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Estado de la pantalla de registro de usuario.
+ * ViewModel para la pantalla de Registro
  *
- * Incluye 4 campos de entrada y sus respectivos errores de validación,
- * además de estados de loading y success para la UI reactiva.
+ * Maneja el estado de la UI y las operaciones de registro.
+ * Solo permite registro de CLIENTES (auto-registro).
  *
- * @property name Nombre completo del usuario.
- * @property email Correo electrónico.
- * @property password Contraseña.
- * @property confirmPassword Confirmación de contraseña (debe coincidir con password).
- * @property nameError Error de validación del nombre.
- * @property emailError Error de validación del email.
- * @property passwordError Error de validación de la contraseña.
- * @property confirmPasswordError Error si las contraseñas no coinciden.
- * @property isLoading Indica si el registro está en progreso.
- * @property isSuccess Indica si el registro fue exitoso.
- * @property generalError Error general del proceso (ej: "Email ya registrado").
+ * **Arquitectura simple:**
+ * El ViewModel crea su propio repository directamente.
  */
-data class RegisterUiState(
-    val name: String = "",
-    val email: String = "",
-    val password: String = "",
-    val confirmPassword: String = "",
-    val nameError: String? = null,
-    val emailError: String? = null,
-    val passwordError: String? = null,
-    val confirmPasswordError: String? = null,
-    val isLoading: Boolean = false,
-    val isSuccess: Boolean = false,
-    val generalError: String? = null
-)
+class RegisterViewModel(application: Application) : AndroidViewModel(application) {
 
-/**
- * ViewModel para la pantalla de registro con validaciones complejas.
- *
- * Coordina el registro de nuevos usuarios validando:
- * - Nombre (mínimo 3 caracteres)
- * - Email (formato válido RFC 5322)
- * - Contraseña (mínimo 8 chars, mayús, minús, número)
- * - Confirmación (debe coincidir con contraseña)
- *
- * **Flujo de registro:**
- * 1. Usuario escribe en los 4 campos con validación en tiempo real
- * 2. Usuario presiona "Registrarse" → `register()`
- * 3. Validación final de todos los campos
- * 4. Si válido: Llama a `userRepository.registerUser()`
- * 5. Si exitoso: `isSuccess = true` → UI navega a Home
- * 6. Si falla: `generalError` con mensaje del servidor
- *
- * @see RegisterUiState
- * @see UserRepository.registerUser
- */
-class RegisterViewModel(application: Application): AndroidViewModel(application) {
+    // El repository se crea directamente (sin inyección de dependencias)
+    private val repository = AuthSaborLocalRepository()
 
-    // Obtener el contenedor de dependencias (singleton compartido)
-    private val dependencies = AppDependencies.getInstance(application)
-
-    // Obtener el UserRepository del contenedor
-    // Ventaja: LoginViewModel, RegisterViewModel y ProfileViewModel comparten la misma instancia
-    private val userRepository = dependencies.userRepository
-    private val _uiState = MutableStateFlow(RegisterUiState())
+    // Estado de la UI
+    private val _uiState = MutableStateFlow<RegisterUiState>(RegisterUiState.Idle)
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
+    // Campos del formulario
+    private val _nombre = MutableStateFlow("")
+    val nombre: StateFlow<String> = _nombre.asStateFlow()
+
+    private val _email = MutableStateFlow("")
+    val email: StateFlow<String> = _email.asStateFlow()
+
+    private val _password = MutableStateFlow("")
+    val password: StateFlow<String> = _password.asStateFlow()
+
+    private val _confirmPassword = MutableStateFlow("")
+    val confirmPassword: StateFlow<String> = _confirmPassword.asStateFlow()
+
+    private val _telefono = MutableStateFlow("")
+    val telefono: StateFlow<String> = _telefono.asStateFlow()
+
+    private val _direccion = MutableStateFlow("")
+    val direccion: StateFlow<String> = _direccion.asStateFlow()
+
+    private val _role = MutableStateFlow("CLIENTE")
+    val role: StateFlow<String> = _role.asStateFlow()
+
+    private val _nombreNegocio = MutableStateFlow("")
+    val nombreNegocio: StateFlow<String> = _nombreNegocio.asStateFlow()
+
+    private val _descripcion = MutableStateFlow("")
+    val descripcion: StateFlow<String> = _descripcion.asStateFlow()
+
     /**
-     * Actualiza el nombre y valida en tiempo real.
-     *
-     * Validación:
-     * - Mínimo 3 caracteres
-     * - No vacío
+     * Actualiza el nombre del formulario
      */
-    fun onNameChange(newName: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                name = newName,
-                nameError = if (newName.isNotEmpty()) ValidationUtils.isValidName(newName) else null
-            )
-        }
+    fun onNombreChange(newNombre: String) {
+        _nombre.value = newNombre
     }
 
     /**
-     * Actualiza el email y valida en tiempo real.
-     *
-     * Validación:
-     * - Formato válido según RFC 5322
-     * - `allowEmpty = true` para no mostrar error mientras se escribe
+     * Actualiza el email del formulario
      */
     fun onEmailChange(newEmail: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                email = newEmail,
-                emailError = ValidationUtils.validateEmail(newEmail, allowEmpty = true)
-            )
-        }
+        _email.value = newEmail
     }
 
     /**
-     * Actualiza la contraseña y valida en tiempo real.
-     *
-     * Validación (solo si no está vacío):
-     * - Mínimo 8 caracteres
-     * - Al menos una mayúscula
-     * - Al menos una minúscula
-     * - Al menos un número
+     * Actualiza la contraseña del formulario
      */
     fun onPasswordChange(newPassword: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                password = newPassword,
-                passwordError = if (newPassword.isNotEmpty()) ValidationUtils.validatePassword(newPassword) else null
-            )
-        }
+        _password.value = newPassword
     }
 
     /**
-     * Actualiza la confirmación de contraseña y valida coincidencia.
-     *
-     * Muestra error si:
-     * - No está vacía Y no coincide con `password`
+     * Actualiza la confirmación de contraseña
      */
     fun onConfirmPasswordChange(newConfirmPassword: String) {
-        _uiState.update { currentState ->
-            currentState.copy(
-                confirmPassword = newConfirmPassword,
-                confirmPasswordError = if (newConfirmPassword.isNotEmpty() && newConfirmPassword != currentState.password) {
-                    "Las contraseñas no coinciden"
-                } else null
-            )
-        }
+        _confirmPassword.value = newConfirmPassword
     }
 
     /**
-     * Inicia el proceso de registro del usuario.
-     *
-     * Realiza validación final de TODOS los campos antes de enviar al Repository.
-     * Si hay algún error, actualiza el estado y retorna sin llamar a la API.
+     * Actualiza el teléfono del formulario
      */
-    fun register(){
-        val currentState = _uiState.value
+    fun onTelefonoChange(newTelefono: String) {
+        _telefono.value = newTelefono
+    }
 
-        // Validar todos los campos
-        val nameError = ValidationUtils.isValidName(currentState.name)
-        val emailError = ValidationUtils.validateEmail(currentState.email)
-        val passwordError = ValidationUtils.validatePassword(currentState.password)
+    /**
+     * Actualiza la dirección del formulario
+     */
+    fun onDireccionChange(newDireccion: String) {
+        _direccion.value = newDireccion
+    }
 
-        // Validar que las contraseñas coincidan y que la confirmación no esté vacía
-        val confirmPasswordError = when {
-            currentState.confirmPassword.isBlank() -> "Confirma tu contraseña"
-            currentState.password != currentState.confirmPassword -> "Las contraseñas no coinciden"
-            else -> null
-        }
+    /**
+     * Actualiza el rol seleccionado (CLIENTE o PRODUCTOR)
+     */
+    fun onRoleChange(newRole: String) {
+        _role.value = newRole.uppercase()
+    }
 
-        // Si hay algún error, actualizar el estado y no continuar
-        if (nameError != null || emailError != null || passwordError != null || confirmPasswordError != null) {
-            _uiState.update { it.copy(
-                nameError = nameError,
-                emailError = emailError,
-                passwordError = passwordError,
-                confirmPasswordError = confirmPasswordError
-            ) }
+    /**
+     * Actualiza el nombre del negocio (solo PRODUCTOR)
+     */
+    fun onNombreNegocioChange(newNombreNegocio: String) {
+        _nombreNegocio.value = newNombreNegocio
+    }
+
+    /**
+     * Actualiza la descripción del negocio (solo PRODUCTOR)
+     */
+    fun onDescripcionChange(newDescripcion: String) {
+        _descripcion.value = newDescripcion
+    }
+
+    /**
+     * Realiza el registro de un nuevo CLIENTE
+     */
+    fun register() {
+        val roleValue = _role.value.uppercase()
+
+        // Validar campos obligatorios
+        if (_nombre.value.isBlank() || _email.value.isBlank() || _password.value.isBlank()) {
+            _uiState.value = RegisterUiState.Error("Por favor completa todos los campos obligatorios")
             return
         }
 
-        register(currentState.name, currentState.email, currentState.password)
-    }
+        // Validar formato de email
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(_email.value).matches()) {
+            _uiState.value = RegisterUiState.Error("Email inválido")
+            return
+        }
 
-    /**
-     * Método privado que ejecuta el registro en el Repository.
-     *
-     * Se separa del público para mantener la validación centralizada
-     * en el método público `register()`.
-     */
-    private fun register (name: String, email:String, password: String){
+        // Validar longitud mínima de contraseña
+        if (_password.value.length < 6) {
+            _uiState.value = RegisterUiState.Error("La contraseña debe tener al menos 6 caracteres")
+            return
+        }
+
+        // Validar que las contraseñas coincidan
+        if (_password.value != _confirmPassword.value) {
+            _uiState.value = RegisterUiState.Error("Las contraseñas no coinciden")
+            return
+        }
+
+        // Validar rol seleccionado
+        if (roleValue != "CLIENTE" && roleValue != "PRODUCTOR") {
+            _uiState.value = RegisterUiState.Error("Selecciona un tipo de cuenta válido")
+            return
+        }
+
+        // Validaciones específicas para PRODUCTOR
+        if (roleValue == "PRODUCTOR" && _nombreNegocio.value.isBlank()) {
+            _uiState.value = RegisterUiState.Error("El nombre del negocio es obligatorio para productores")
+            return
+        }
+
+        _uiState.value = RegisterUiState.Loading
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            val result = repository.register(
+                email = _email.value,
+                password = _password.value,
+                role = roleValue,
+                nombre = _nombre.value,
+                telefono = _telefono.value.ifBlank { null },
+                direccion = _direccion.value.ifBlank { null },
+                nombreNegocio = if (roleValue == "PRODUCTOR") _nombreNegocio.value else null,
+                descripcion = if (roleValue == "PRODUCTOR") _descripcion.value.ifBlank { null } else null
+            )
 
-            userRepository.registerUser(name, email, password)
-                .onSuccess { user ->
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        isSuccess = true
-                    ) }
-                }
-                .onFailure { exception ->
-                    _uiState.update { it.copy(
-                        isLoading = false,
-                        generalError = exception.message
-                    ) }
-                }
+            _uiState.value = when (result) {
+                is ApiResult.Success -> RegisterUiState.Success(result.data)
+                is ApiResult.Error -> RegisterUiState.Error(result.message)
+            }
         }
     }
 
     /**
-     * Limpia todos los mensajes de error del estado.
+     * Resetea el estado a Idle
      */
-    fun clearErrors() {
-        _uiState.update { it.copy(
-            nameError = null,
-            emailError = null,
-            passwordError = null,
-            confirmPasswordError = null,
-            generalError = null
-        ) }
+    fun resetState() {
+        _uiState.value = RegisterUiState.Idle
     }
+
+    /**
+     * Limpia los campos del formulario
+     */
+    fun clearForm() {
+        _nombre.value = ""
+        _email.value = ""
+        _password.value = ""
+        _confirmPassword.value = ""
+        _telefono.value = ""
+        _direccion.value = ""
+        _role.value = "CLIENTE"
+        _nombreNegocio.value = ""
+        _descripcion.value = ""
+    }
+}
+
+/**
+ * Estados posibles de la UI de Registro
+ */
+sealed class RegisterUiState {
+    object Idle : RegisterUiState()
+    object Loading : RegisterUiState()
+    data class Success(val user: User) : RegisterUiState()
+    data class Error(val message: String) : RegisterUiState()
 }

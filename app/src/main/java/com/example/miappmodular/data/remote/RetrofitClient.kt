@@ -1,7 +1,11 @@
 package com.example.miappmodular.data.remote
 
 import android.content.Context
-import com.example.miappmodular.data.local.SessionManager
+import com.example.miappmodular.data.local.TokenManager
+import com.example.miappmodular.data.remote.api.*
+import com.example.miappmodular.data.remote.dto.pedido.ClienteDto
+import com.example.miappmodular.data.remote.dto.pedido.ClienteDtoDeserializer
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -9,134 +13,112 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 /**
- * Objeto singleton que configura y proporciona el cliente Retrofit para la API de Xano.
+ * Objeto singleton que configura y proporciona el cliente Retrofit para la API de SaborLocal.
  *
- * Este object implementa el patrón Singleton usando `object` de Kotlin para garantizar
- * una única instancia compartida de Retrofit y OkHttpClient en toda la aplicación.
- * Todas las propiedades se inicializan de forma lazy (solo cuando se acceden).
+ * **Patrón Singleton Simple:**
+ * Este object usa el patrón Singleton de Kotlin para garantizar una única instancia
+ * compartida de Retrofit en toda la aplicación.
+ *
+ * **¿Por qué necesitamos initialize()?**
+ * Necesitamos el Context de la aplicación para crear TokenManager, que usa
+ * EncryptedSharedPreferences para guardar tokens de forma segura.
  *
  * **Configuración:**
- * - **Base URL:** `https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/`
- * - **Convertidor JSON:** Gson para serialización/deserialización automática
- * - **Timeouts:** 30 segundos para conexión, lectura y escritura
- * - **Logging:** Registra todo el cuerpo de requests/responses en desarrollo
+ * - **Base URL:** http://10.0.2.2:3008/api/ (localhost del emulador)
+ * - **TokenManager:** Gestión segura de tokens JWT con encriptación
+ * - **AuthInterceptor:** Añade automáticamente el token a las peticiones
+ * - **Logging:** Registra requests/responses para debugging
+ * - **Timeouts:** Aumentados para Render.com (60s conexión, 90s lectura, 60s escritura)
  *
- * **Patrón Lazy:**
- * Las propiedades `okHttpClient`, `retrofit` y `authApiService` usan `by lazy`,
- * lo que significa que se crean solo la primera vez que se acceden y se reutilizan
- * en accesos subsecuentes. Esto optimiza el uso de memoria y rendimiento.
- *
- * Ejemplo de uso en Repository:
+ * **Ejemplo de uso en MainActivity:**
  * ```kotlin
- * class UserRepository {
- *     private val apiService = RetrofitClient.authApiService
+ * class MainActivity : ComponentActivity() {
+ *     override fun onCreate(savedInstanceState: Bundle?) {
+ *         super.onCreate(savedInstanceState)
  *
- *     suspend fun registerUser(request: SignUpRequest): Result<AuthResponse> {
- *         return try {
- *             val response = apiService.signUp(request)
- *             if (response.isSuccessful) {
- *                 Result.success(response.body()!!)
- *             } else {
- *                 Result.failure(Exception("HTTP ${response.code()}"))
- *             }
- *         } catch (e: Exception) {
- *             Result.failure(e)
- *         }
+ *         // Inicializar RetrofitClient una sola vez al inicio
+ *         RetrofitClient.initialize(this)
+ *
+ *         setContent { /* ... */ }
  *     }
  * }
  * ```
  *
- * Ejemplo con Dependency Injection (Hilt):
+ * **Ejemplo de uso en Repository:**
  * ```kotlin
- * @Module
- * @InstallIn(SingletonComponent::class)
- * object NetworkModule {
- *     @Provides
- *     @Singleton
- *     fun provideAuthApiService(): AuthApiService {
- *         return RetrofitClient.authApiService
+ * class ProductoRepository {
+ *     private val apiService = RetrofitClient.saborLocalProductoApiService
+ *
+ *     suspend fun getProductos(): Result<List<Producto>> {
+ *         val response = apiService.getProductos()
+ *         // ...
  *     }
  * }
  * ```
  *
- * ⚠️ **Nota de producción:**
- * El logging interceptor registra cuerpos completos de requests/responses (nivel BODY).
- * En producción, cambiar a `Level.NONE` o `Level.BASIC` para evitar logs sensibles.
- *
- * @see AuthApiService
- * @see com.example.miappmodular.repository.UserRepository
+ * @see TokenManager
+ * @see AuthInterceptor
  */
 object RetrofitClient {
 
     /**
-     * URL base de la API de Xano.
+     * URL base de la API de SaborLocal.
      *
-     * Todas las rutas definidas en [AuthApiService] se concatenan con esta base.
-     * Ejemplo: `@POST("auth/login")` se convierte en
-     * `https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/auth/login`
+     * **NOTA:** 10.0.2.2 es la IP especial que el emulador de Android usa
+     * para acceder a localhost de tu máquina host.
+     *
+     * Si usas un dispositivo físico, cambia esto por la IP de tu computadora
+     * en la red local (ej: 192.168.1.X:3008).
      */
-    private const val BASE_URL = "https://x8ki-letl-twmt.n7.xano.io/api:Rfm_61dW/"
+    private const val BASE_URL = "https://saborloca-api.onrender.com/api/"
 
     /**
-     * SessionManager para manejar tokens de autenticación.
-     *
-     * Debe ser inicializado llamando [initialize] antes de usar el cliente.
+     * TokenManager para gestión segura de tokens JWT.
+     * Se inicializa llamando a initialize() con el contexto de la app.
      */
-    private lateinit var sessionManager: SessionManager
+    private lateinit var tokenManager: TokenManager
 
     /**
      * Inicializa el RetrofitClient con el contexto de la aplicación.
      *
-     * Este método debe ser llamado una vez al inicio de la aplicación,
-     * preferiblemente en Application.onCreate() o antes de usar cualquier
-     * servicio de la API que requiera autenticación.
+     * **IMPORTANTE:** Debe llamarse UNA SOLA VEZ al inicio de la app,
+     * en MainActivity.onCreate() o en Application.onCreate().
      *
-     * @param context Contexto de la aplicación (preferiblemente ApplicationContext).
+     * @param context Contexto de la aplicación (preferiblemente ApplicationContext)
      *
-     * Ejemplo de uso:
+     * Ejemplo:
      * ```kotlin
-     * class MyApplication : Application() {
-     *     override fun onCreate() {
-     *         super.onCreate()
+     * class MainActivity : ComponentActivity() {
+     *     override fun onCreate(savedInstanceState: Bundle?) {
+     *         super.onCreate(savedInstanceState)
      *         RetrofitClient.initialize(this)
      *     }
      * }
      * ```
      */
     fun initialize(context: Context) {
-        sessionManager = SessionManager(context.applicationContext)
+        tokenManager = TokenManager(context.applicationContext)
     }
 
     /**
      * Cliente HTTP OkHttp configurado con interceptores y timeouts.
      *
      * **Configuración:**
-     * - **AuthInterceptor:** Añade automáticamente el header Authorization con el JWT token.
-     *   Se ejecuta ANTES que LoggingInterceptor para que los logs muestren el header correctamente.
-     *
-     * - **HttpLoggingInterceptor:** Registra todas las peticiones y respuestas HTTP
-     *   con nivel BODY (incluye headers, body JSON, códigos de respuesta).
-     *   Útil para debugging pero debe desactivarse en producción por seguridad.
-     *
-     * - **Timeouts (30 segundos c/u):**
-     *   - `connectTimeout`: Máximo tiempo para establecer conexión TCP
-     *   - `readTimeout`: Máximo tiempo esperando respuesta del servidor
-     *   - `writeTimeout`: Máximo tiempo para enviar datos al servidor
-     *
-     * **Orden de interceptores:**
-     * 1. AuthInterceptor - Añade autenticación
-     * 2. LoggingInterceptor - Registra la petición completa (con headers de auth)
+     * 1. **AuthInterceptor:** Añade automáticamente el header Authorization con el JWT token
+     * 2. **HttpLoggingInterceptor:** Registra todas las peticiones y respuestas (útil para debugging)
+     * 3. **Timeouts aumentados para Render.com free tier:**
+     *    - connectTimeout: 60s (para cold starts)
+     *    - readTimeout: 90s (para operaciones lentas)
+     *    - writeTimeout: 60s (para uploads grandes)
      *
      * **Lazy initialization:**
      * Se crea solo cuando se accede por primera vez. Thread-safe por defecto en Kotlin.
-     *
-     * @see okhttp3.OkHttpClient
-     * @see okhttp3.logging.HttpLoggingInterceptor
-     * @see AuthInterceptor
      */
     private val okHttpClient: OkHttpClient by lazy {
-        val authInterceptor = AuthInterceptor(sessionManager)
+        // AuthInterceptor añade el token JWT a las peticiones automáticamente
+        val authInterceptor = AuthInterceptor(tokenManager)
 
+        // LoggingInterceptor registra las peticiones y respuestas para debugging
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -144,64 +126,107 @@ object RetrofitClient {
         OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)  // Aumentado para cold starts de Render
+            .readTimeout(90, TimeUnit.SECONDS)     // Aumentado para operaciones lentas
+            .writeTimeout(60, TimeUnit.SECONDS)    // Aumentado para uploads grandes
             .build()
+    }
+
+    /**
+     * Configuración personalizada de Gson con deserializadores custom.
+     *
+     * **ClienteDtoDeserializer:**
+     * Maneja el caso donde el backend retorna `cliente` como String en listas
+     * y como Object en detalles (debido a .populate() de MongoDB).
+     */
+    private val gson by lazy {
+        GsonBuilder()
+            .registerTypeAdapter(ClienteDto::class.java, ClienteDtoDeserializer())
+            .create()
     }
 
     /**
      * Instancia singleton de Retrofit.
      *
-     * Retrofit es la biblioteca que convierte interfaces Kotlin (como [AuthApiService])
-     * en clientes HTTP funcionales, manejando automáticamente:
-     * - Serialización JSON → Objetos Kotlin (con Gson)
-     * - Objetos Kotlin → JSON en request bodies
+     * Retrofit convierte interfaces Kotlin en clientes HTTP funcionales,
+     * manejando automáticamente:
+     * - Serialización JSON ↔ Objetos Kotlin (con Gson)
      * - Manejo de URLs, headers y parámetros
      * - Integración con corrutinas (suspend functions)
      *
-     * **Configuración:**
-     * - **BaseUrl:** [BASE_URL]
-     * - **Client:** [okHttpClient] con logging y timeouts
-     * - **Converter:** [GsonConverterFactory] para JSON ↔ Objetos
-     *
      * **Lazy initialization:**
-     * Se construye solo la primera vez que se necesita.
-     *
-     * @see retrofit2.Retrofit
+     * Se crea solo cuando se necesita por primera vez.
      */
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 
+    // ========= API Services - Organizados por dominio =========
+
     /**
-     * Servicio de autenticación generado automáticamente por Retrofit.
-     *
-     * Retrofit toma la interfaz [AuthApiService] y genera dinámicamente
-     * una implementación completa en tiempo de ejecución usando Reflection
-     * y Dynamic Proxy.
-     *
-     * Este servicio contiene todos los endpoints de autenticación:
-     * - `signUp()`: Registro de nuevos usuarios
-     * - `login()`: Autenticación de usuarios existentes
-     * - `userActually()`: Obtener datos del usuario autenticado
-     *
-     * **Uso:**
-     * ```kotlin
-     * val apiService = RetrofitClient.authApiService
-     * val response = apiService.login(LoginRequest(email, password))
-     * ```
-     *
-     * **Lazy initialization:**
-     * La interfaz se implementa solo cuando se accede por primera vez.
-     *
-     * @see AuthApiService
+     * API service para autenticación (login, registro, perfil)
      */
-    val authApiService: AuthApiService by lazy {
-        retrofit.create(AuthApiService::class.java)
+    val saborLocalAuthApiService: SaborLocalAuthApiService by lazy {
+        retrofit.create(SaborLocalAuthApiService::class.java)
     }
+
+    /**
+     * API service para gestión de productos
+     */
+    val saborLocalProductoApiService: SaborLocalProductoApiService by lazy {
+        retrofit.create(SaborLocalProductoApiService::class.java)
+    }
+
+    /**
+     * API service para gestión de productores
+     */
+    val saborLocalProductorApiService: SaborLocalProductorApiService by lazy {
+        retrofit.create(SaborLocalProductorApiService::class.java)
+    }
+
+    /**
+     * API service para gestión de clientes
+     */
+    val saborLocalClienteApiService: SaborLocalClienteApiService by lazy {
+        retrofit.create(SaborLocalClienteApiService::class.java)
+    }
+
+    /**
+     * API service para gestión de pedidos
+     */
+    val saborLocalPedidoApiService: SaborLocalPedidoApiService by lazy {
+        retrofit.create(SaborLocalPedidoApiService::class.java)
+    }
+
+    /**
+     * API service para gestión de entregas
+     */
+    val saborLocalEntregaApiService: SaborLocalEntregaApiService by lazy {
+        retrofit.create(SaborLocalEntregaApiService::class.java)
+    }
+
+    /**
+     * API service para subir archivos (imágenes, documentos)
+     */
+    val saborLocalUploadApiService: SaborLocalUploadApiService by lazy {
+        retrofit.create(SaborLocalUploadApiService::class.java)
+    }
+
+    /**
+     * Obtiene el TokenManager para acceso directo al token.
+     *
+     * Útil en casos donde necesitas verificar si hay sesión activa
+     * o acceder al usuario actual sin pasar por el repository.
+     *
+     * Ejemplo:
+     * ```kotlin
+     * val isLoggedIn = RetrofitClient.getTokenManager().isLoggedIn()
+     * val currentUser = RetrofitClient.getTokenManager().getCurrentUser()
+     * ```
+     */
+    fun getTokenManager(): TokenManager = tokenManager
 }
