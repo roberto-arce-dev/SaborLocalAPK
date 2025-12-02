@@ -11,9 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.miappmodular.ui.theme.Foreground
-import com.example.miappmodular.ui.theme.Primary
-import com.example.miappmodular.ui.theme.Surface
 import com.example.miappmodular.viewmodel.SplashNavigationState
 import com.example.miappmodular.viewmodel.SplashViewModel
 
@@ -48,7 +45,7 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Surface),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -59,7 +56,7 @@ fun SplashScreen(
             Surface(
                 modifier = Modifier.size(120.dp),
                 shape = MaterialTheme.shapes.large,
-                color = Primary
+                color = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
                     imageVector = Icons.Filled.LocalDining,
@@ -78,14 +75,14 @@ fun SplashScreen(
                 text = "SaborLocal",
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Foreground
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             )
 
             Text(
                 text = "Productos frescos de tu región",
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Foreground.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                 ),
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -95,7 +92,7 @@ fun SplashScreen(
             // Loading indicator
             if (navigationState is SplashNavigationState.Checking) {
                 CircularProgressIndicator(
-                    color = Primary,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(32.dp)
                 )
             }

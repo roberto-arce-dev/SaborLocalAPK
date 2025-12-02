@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.miappmodular.model.Producto
-import com.example.miappmodular.model.Result
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.repository.ProductoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,18 +47,20 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Carga todos los productos desde el backend
+     */
      */
     fun loadProductos() {
         _uiState.value = ProductosListUiState.Loading
 
         viewModelScope.launch {
             when (val result = repository.getProductos()) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     allProductos = result.data
                     applyFilters()
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _uiState.value = ProductosListUiState.Error(result.message)
                 }
             }
@@ -66,7 +68,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Actualiza el query de búsqueda
+     */
      */
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
@@ -74,7 +78,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Filtra por productor
+     */
      */
     fun onProductorFilterChange(productorId: String?) {
         _selectedProductor.value = productorId
@@ -82,7 +88,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Filtra por precio mínimo
+     */
      */
     fun onMinPriceChange(price: Double?) {
         _minPrice.value = price
@@ -90,7 +98,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Filtra por precio máximo
+     */
      */
     fun onMaxPriceChange(price: Double?) {
         _maxPrice.value = price
@@ -98,7 +108,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Limpia todos los filtros
+     */
      */
     fun clearFilters() {
         _searchQuery.value = ""
@@ -109,7 +121,9 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Aplica todos los filtros activos
+     */
      */
     private fun applyFilters() {
         var filtered = allProductos
@@ -148,11 +162,13 @@ class ProductosListViewModel(application: Application) : AndroidViewModel(applic
     }
 
     /**
+    /**
      * Obtiene lista única de productores de los productos
+     */
      */
     fun getProductores(): List<Pair<String, String>> {
         return allProductos
-            .map { it.productor.id to it.productor.nombre }
+            .map { it.productor.id to it.productor.getDisplayName() }
             .distinctBy { it.first }
     }
 }

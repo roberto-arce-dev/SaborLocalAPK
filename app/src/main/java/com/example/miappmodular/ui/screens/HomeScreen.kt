@@ -2,423 +2,643 @@ package com.example.miappmodular.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.example.miappmodular.model.Producto
 import com.example.miappmodular.ui.components.*
 import com.example.miappmodular.ui.theme.*
+import com.example.miappmodular.utils.getImagenUrl
+import com.example.miappmodular.utils.getThumbnailUrl
+import com.example.miappmodular.viewmodel.HomeUiState
+import com.example.miappmodular.viewmodel.HomeViewModel
 
 /**
- * Pantalla principal (Dashboard) de la aplicación tras autenticación exitosa.
+ * HomeScreen rediseñado estilo Instagram/Facebook/Amazon
  *
- * **Funcionalidad:**
- * - Dashboard centralizado con vista general de la app
- * - TopBar personalizado shadcn.io con logo, título y acciones
- * - Tarjetas de estadísticas (Total Usuarios, Activos Hoy)
- * - Grid de módulos/features con badges de versión de implementación
- * - Navegación a perfil de usuario y logout
- * - Navegación a módulos individuales (Map, Camera, etc.)
+ * **Nueva Arquitectura:**
+ * - Bottom Navigation para acceso rápido (5 tabs principales)
+ * - Feed moderno con scroll vertical
+ * - Secciones horizontales (productores, productos)
+ * - Buscador prominente en el header
  *
- * **Arquitectura de UI:**
+ * **Estructura:**
  * ```
  * HomeScreen
- * ├── TopBar (Surface + Row)
- * │   ├── Logo + Título "Mi App Modular"
- * │   └── Actions: Profile Icon + Logout Icon
- * ├── StatCards (Row con 2 cards)
- * │   ├── Total Usuarios (1,234)
- * │   └── Activos Hoy (89)
- * └── Módulos Grid (LazyVerticalGrid 2 columnas)
- *     ├── Mapa GPS (IL 2.4)
- *     ├── Cámara (IL 2.4)
- *     ├── Base de Datos (IL 2.3)
- *     ├── Configuración (IL 2.3)
- *     ├── Temas (IL 2.1)
- *     └── Notificaciones (IL 2.2)
+ * ├── TopBar Simplificado
+ * │   ├── Logo "SaborLocal"
+ * │   └── Buscador
+ * └── LazyColumn (Feed)
+ *     ├── Welcome Header
+ *     ├── Quick Actions (4 categorías)
+ *     ├── Productores Destacados (carrusel horizontal)
+ *     ├── Productos Recientes (carrusel horizontal)
+ *     └── Todas las Categorías (grid 2 columnas)
  * ```
- *
- * **Diseño shadcn.io:**
- * - TopBar: Surface con elevación 1.dp y divider inferior
- * - Background: BackgroundSecondary para contraste
- * - Grid: 2 columnas fijas con spacing 12.dp
- * - Cards: FeatureModuleCard con badge, icono, título, descripción
- * - StatCards: Layout horizontal con icono y valores numéricos
- *
- * **Badges de módulos:**
- * Los badges indican el nivel de implementación (IL = Implementation Level):
- * - IL 2.4: Completamente implementado
- * - IL 2.3: Funcional pero incompleto
- * - IL 2.2: En desarrollo
- * - IL 2.1: Prototipo
- *
- * **Navegación:**
- * - Icono Profile → Navega a ProfileScreen
- * - Icono Logout → Cierra sesión y regresa a LoginScreen (backstack limpiado)
- * - Cards de módulos → Navegan a sus respectivas pantallas
- *
- * **Solo accesible tras autenticación exitosa.** Si el usuario no está
- * autenticado, el AppNavigation debe redirigir automáticamente a LoginScreen.
- *
- * @param onNavigateToProfile Callback para navegar a pantalla de perfil.
- * @param onNavigateToMap Callback para navegar a módulo de mapa GPS.
- * @param onNavigateToCamera Callback para navegar a módulo de cámara.
- * @param onLogout Callback para cerrar sesión y regresar a login.
- *
- * @see FeatureModuleCard
- * @see com.example.miappmodular.ui.navigation.AppNavigation
- * @see ProfileScreen
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToProfile: () -> Unit,
+    viewModel: HomeViewModel = viewModel(),
+    onNavigateToProfile: () -> Unit = {},
     onNavigateToMap: () -> Unit = {},
     onNavigateToCamera: () -> Unit = {},
     onNavigateToProductosList: () -> Unit = {},
     onNavigateToCreateProducto: () -> Unit = {},
     onNavigateToCreateProductor: () -> Unit = {},
     onNavigateToProductoresList: () -> Unit = {},
-    onLogout: () -> Unit
+    onNavigateToCarrito: () -> Unit = {},
+    onNavigateToPedidos: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // Estado de datos
+    val recentProductsState by viewModel.recentProducts.collectAsState()
+    val featuredProductoresState by viewModel.featuredProductores.collectAsState()
+
+    // Estado para el detalle de producto (Bottom Sheet)
+    var selectedProduct by remember { mutableStateOf<Producto?>(null) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Bottom Sheet de detalle
+    if (selectedProduct != null) {
+        ProductDetailSheet(
+            producto = selectedProduct!!,
+            onDismissRequest = { selectedProduct = null },
+            onAddToCart = { producto ->
+                com.example.miappmodular.data.local.CarritoManager.addItem(producto)
+                android.widget.Toast.makeText(
+                    context,
+                    "Producto agregado al carrito",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                selectedProduct = null
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
-            // TopBar estilo shadcn.io
+            // TopBar Minimalista con Buscador
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Surface,
-                shadowElevation = 1.dp
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 2.dp
             ) {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    // Logo y título
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp)
-                            .padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Logo/Título
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                modifier = Modifier.size(40.dp),
-                                shape = MaterialTheme.shapes.small,
-                                color = Primary
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Apps,
-                                    contentDescription = null,
-                                    tint = androidx.compose.ui.graphics.Color.White,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(8.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Mi App Modular",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Foreground
-                                    )
-                                )
-                                Text(
-                                    text = "Dashboard",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = ForegroundMuted
-                                    )
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Filled.Agriculture,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "SaborLocal",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
 
-                        // Acciones
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IconButton(
-                                onClick = onNavigateToProfile,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Person,
-                                    contentDescription = "Perfil",
-                                    tint = ForegroundMuted,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            IconButton(
-                                onClick = onLogout,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Logout,
-                                    contentDescription = "Cerrar sesión",
-                                    tint = ForegroundMuted,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
+                        // Notificaciones (futuro)
+                        IconButton(onClick = { /* TODO: Notifications */ }) {
+                            Icon(
+                                imageVector = Icons.Filled.Notifications,
+                                contentDescription = "Notificaciones",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                    ShadcnDivider()
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Buscador
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Buscar productos, productores...") },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Search, contentDescription = null)
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Clear, contentDescription = "Limpiar")
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(24.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    )
                 }
             }
         }
     ) { paddingValues ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(BackgroundSecondary)
-                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 100.dp) // Espacio para Bottom Nav
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                // Header con estadísticas
-
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Título de sección
-                Text(
-                    text = "Módulos",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Foreground
-                    )
-                )
-
-                Text(
-                    text = "Accede a las diferentes funcionalidades",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = ForegroundMuted
-                    ),
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Grid de módulos
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            // ========= WELCOME HEADER =========
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
+                    Text(
+                        text = "Hola! 👋",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "¿Qué quieres comprar hoy?",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
 
+            // ========= QUICK ACTIONS =========
+            item {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     item {
-                        FeatureModuleCard(
+                        QuickActionChip(
+                            icon = Icons.Filled.Group,
+                            label = "Productores",
+                            onClick = onNavigateToProductoresList
+                        )
+                    }
+                    item {
+                        QuickActionChip(
                             icon = Icons.Filled.ShoppingCart,
-                            title = "Productos",
-                            description = "Lista de productos",
-                            badge = "IL 2.4",
+                            label = "Productos",
+                            onClick = onNavigateToProductosList
+                        )
+                    }
+                    item {
+                        QuickActionChip(
+                            icon = Icons.Filled.LocalOffer,
+                            label = "Ofertas",
+                            onClick = { /* TODO */ }
+                        )
+                    }
+                    item {
+                        QuickActionChip(
+                            icon = Icons.Filled.Category,
+                            label = "Categorías",
+                            onClick = { /* TODO */ }
+                        )
+                    }
+                }
+            }
+
+            // ========= PRODUCTORES DESTACADOS =========
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    SectionHeader(
+                        title = "Productores Destacados",
+                        actionText = "Ver todos",
+                        onActionClick = onNavigateToProductoresList
+                    )
+
+                    when (featuredProductoresState) {
+                        is HomeUiState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        is HomeUiState.Error -> {
+                            Text(
+                                text = "No se pudieron cargar los productores",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                        is HomeUiState.Success -> {
+                            val productores = (featuredProductoresState as HomeUiState.Success<List<com.example.miappmodular.model.Productor>>).data
+
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(productores.size) { index ->
+                                    val productor = productores[index]
+                                    ProductorCard(
+                                        productor = productor,
+                                        onClick = onNavigateToProductoresList
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========= PRODUCTOS RECIENTES =========
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    SectionHeader(
+                        title = "Productos Frescos",
+                        actionText = "Ver todos",
+                        onActionClick = onNavigateToProductosList
+                    )
+
+                    when (recentProductsState) {
+                        is HomeUiState.Loading -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        is HomeUiState.Error -> {
+                            Text(
+                                text = "No se pudieron cargar los productos",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                        is HomeUiState.Success -> {
+                            val productos = (recentProductsState as HomeUiState.Success<List<Producto>>).data
+                            
+                            LazyRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(productos.size) { index ->
+                                    val producto = productos[index]
+                                    HomeProductoCard(
+                                        producto = producto,
+                                        onClick = { selectedProduct = producto }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ========= CATEGORÍAS =========
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = "Explorar Categorías",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    // Grid 2x2 de categorías
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CategoryCard(
+                            icon = Icons.Filled.Eco,
+                            title = "Frutas",
+                            count = "120 productos",
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToProductosList
+                        )
+                        CategoryCard(
+                            icon = Icons.Filled.Restaurant,
+                            title = "Verduras",
+                            count = "85 productos",
+                            modifier = Modifier.weight(1f),
                             onClick = onNavigateToProductosList
                         )
                     }
 
-                    item {
-                        FeatureModuleCard(
-                            icon = Icons.Filled.AddCircle,
-                            title = "Crear Producto",
-                            description = "Nuevo producto",
-                            badge = "IL 2.4",
-                            onClick = onNavigateToCreateProducto
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    item {
-                        FeatureModuleCard(
-                            icon = Icons.Filled.PersonAdd,
-                            title = "Crear Productor",
-                            description = "Nuevo productor (ADMIN)",
-                            badge = "IL 2.4",
-                            onClick = onNavigateToCreateProductor
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CategoryCard(
+                            icon = Icons.Filled.Fastfood,
+                            title = "Lácteos",
+                            count = "45 productos",
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToProductosList
+                        )
+                        CategoryCard(
+                            icon = Icons.Filled.Cake,
+                            title = "Panadería",
+                            count = "60 productos",
+                            modifier = Modifier.weight(1f),
+                            onClick = onNavigateToProductosList
                         )
                     }
+                }
+            }
 
-                    item {
-                        FeatureModuleCard(
-                            icon = Icons.Filled.Group,
-                            title = "Ver Productores",
-                            description = "Lista de productores",
-                            badge = "IL 2.4",
-                            onClick = onNavigateToProductoresList
-                        )
-                    }
+            // Espaciado final
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+// ==================== COMPONENTES NUEVOS ====================
+
+@Composable
+fun SectionHeader(
+    title: String,
+    actionText: String,
+    onActionClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        TextButton(onClick = onActionClick) {
+            Text(
+                text = actionText,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+            Icon(
+                imageVector = Icons.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickActionChip(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.height(40.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun ProductorCard(
+    productor: com.example.miappmodular.model.Productor,
+    onClick: () -> Unit
+) {
+    ShadcnCard(
+        onClick = onClick,
+        modifier = Modifier
+            .width(160.dp)
+            .height(200.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Avatar del productor con imagen real o placeholder
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .align(Alignment.CenterHorizontally),
+                contentAlignment = Alignment.Center
+            ) {
+                if (productor.imagen != null) {
+                    AsyncImage(
+                        model = productor.getThumbnailUrl() ?: productor.getImagenUrl(),
+                        contentDescription = productor.nombre,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            }
+
+            Column {
+                Text(
+                    text = productor.getDisplayName(),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = productor.ubicacion ?: "Sin ubicación",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Phone,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = productor.telefono ?: "Sin teléfono",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
     }
 }
 
-/**
- * Tarjeta de estadística reutilizable con diseño shadcn.io.
- *
- * Componente presentacional que muestra una métrica clave con su valor
- * numérico y un icono representativo. Usado típicamente en dashboards
- * para mostrar KPIs (Key Performance Indicators) de forma visual.
- *
- * **Diseño:**
- * - Layout horizontal: Texto a la izquierda, icono a la derecha
- * - Título: bodySmall, ForegroundMuted, Medium weight
- * - Valor: headlineMedium, Foreground, Bold (destaca el número)
- * - Icono: Surface con fondo Muted, tamaño 40.dp
- * - Elevación: 1.dp (sombra sutil)
- *
- * **Ejemplo de uso:**
- * ```kotlin
- * StatCard(
- *     title = "Ventas Hoy",
- *     value = "$12,345",
- *     icon = Icons.Filled.AttachMoney,
- *     modifier = Modifier.weight(1f)
- * )
- * ```
- *
- * **Casos de uso comunes:**
- * - Estadísticas de usuarios (totales, activos, nuevos)
- * - Métricas de ventas o ingresos
- * - Contadores de eventos o notificaciones
- * - Cualquier KPI numérico que requiera visualización compacta
- *
- * @param title Etiqueta descriptiva de la métrica (ej: "Total Usuarios").
- * @param value Valor numérico o texto a destacar (ej: "1,234" o "$5.6K").
- * @param icon Icono representativo de la métrica (Material Icons).
- * @param modifier Modificador opcional para layout (ej: .weight() en Row).
- *
- * @see ShadcnCard
- * @see HomeScreen
- */
 @Composable
-fun StatCard(
-    title: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
+fun HomeProductoCard(
+    producto: Producto,
+    onClick: () -> Unit
 ) {
     ShadcnCard(
-        modifier = modifier,
-        elevation = 1.dp
+        onClick = onClick,
+        modifier = Modifier
+            .width(140.dp)
+            .height(200.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = ForegroundMuted,
-                        fontWeight = FontWeight.Medium
+            // Imagen del producto
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                if (producto.imagen != null) {
+                    AsyncImage(
+                        model = producto.getThumbnailUrl() ?: producto.getImagenUrl(),
+                        contentDescription = producto.nombre,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Foreground
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.ShoppingBag,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
                     )
-                )
+                }
             }
 
-            Surface(
-                modifier = Modifier.size(40.dp),
-                shape = MaterialTheme.shapes.small,
-                color = Muted
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = ForegroundMuted,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(10.dp)
+                Text(
+                    text = producto.nombre,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = producto.getPrecioFormateado(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = producto.productor.getDisplayName(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
     }
 }
 
-/**
- * Tarjeta clickable para módulos/features de la aplicación con diseño shadcn.io.
- *
- * Componente reutilizable que representa un módulo o feature de la app en el
- * dashboard principal. Diseñado para grids LazyVerticalGrid con aspecto ratio 1:1.
- *
- * **Diseño:**
- * - Layout vertical con 3 secciones:
- *   1. Header: Icono (48.dp, fondo Muted) + Badge en esquina superior derecha
- *   2. Body: Título (titleMedium, SemiBold) + Descripción (bodySmall, Muted)
- *   3. Footer: "Abrir" + ArrowForward icon (color Primary)
- * - AspectRatio 1:1 (cuadrado perfecto)
- * - Padding interno: 16.dp
- * - Elevación: 1.dp
- * - Clickable con efecto ripple
- *
- * **Badges:**
- * Indican el nivel de implementación del módulo:
- * - IL 2.4: Completamente funcional y testeado
- * - IL 2.3: Funcional con features pendientes
- * - IL 2.2: En desarrollo activo
- * - IL 2.1: Prototipo o demo
- *
- * **Ejemplo de uso:**
- * ```kotlin
- * LazyVerticalGrid(columns = GridCells.Fixed(2)) {
- *     item {
- *         FeatureModuleCard(
- *             icon = Icons.Filled.Map,
- *             title = "Mapa GPS",
- *             description = "Ubicación y navegación",
- *             badge = "IL 2.4",
- *             onClick = { navController.navigate("map") }
- *         )
- *     }
- * }
- * ```
- *
- * **Variaciones de estado:**
- * - Normal: Fondo blanco, borde sutil
- * - Hover/Press: Ripple effect con color Primary
- * - Disabled: Se puede implementar con enabled parameter en futuras versiones
- *
- * @param icon Icono Material que representa el módulo visualmente.
- * @param title Nombre del módulo (ej: "Mapa GPS", "Cámara").
- * @param description Descripción breve de la funcionalidad (1-3 palabras).
- * @param badge Etiqueta de versión/nivel de implementación (ej: "IL 2.4").
- * @param onClick Callback ejecutado al hacer click en el card.
- *
- * @see ShadcnCard
- * @see ShadcnBadge
- * @see HomeScreen
- */
 @Composable
-fun FeatureModuleCard(
+fun CategoryCard(
     icon: ImageVector,
     title: String,
-    description: String,
-    badge: String,
+    count: String,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     ShadcnCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f),
         onClick = onClick,
-        elevation = 1.dp
+        modifier = modifier.height(120.dp)
     ) {
         Column(
             modifier = Modifier
@@ -426,70 +646,22 @@ fun FeatureModuleCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Surface(
-                        modifier = Modifier.size(48.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        color = Muted
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = Primary,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(12.dp)
-                        )
-                    }
-
-                    ShadcnBadge(
-                        text = badge,
-                        variant = BadgeVariant.Default
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = Foreground
-                    )
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = ForegroundMuted
-                    )
-                )
-            }
-
-            // Footer del card
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Abrir",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Primary,
-                        fontWeight = FontWeight.Medium
-                    )
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(14.dp)
+                    text = count,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

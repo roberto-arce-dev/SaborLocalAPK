@@ -19,6 +19,17 @@ interface SaborLocalProductoApiService {
     suspend fun getProductos(): Response<ApiResponse<List<ProductoDto>>>
 
     /**
+     * Obtiene el catálogo de productos de un productor específico
+     * GET /api/producto/productor/{productorId}
+     *
+     * Endpoint clave para EP3: Permite ver todos los productos que ofrece un productor
+     */
+    @GET("producto/productor/{productorId}")
+    suspend fun getProductosByProductor(
+        @Path("productorId") productorId: String
+    ): Response<ApiResponse<List<ProductoDto>>>
+
+    /**
      * Obtiene un producto específico por ID
      * GET /api/producto/{id}
      */

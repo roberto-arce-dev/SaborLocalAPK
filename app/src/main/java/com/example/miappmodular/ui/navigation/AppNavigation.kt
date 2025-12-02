@@ -127,124 +127,19 @@ fun AppNavigation() {
         /**
          * Ruta: home
          *
-         * Pantalla principal de la app (dashboard). Muestra:
-         * - Estadísticas de usuarios
-         * - Grid de módulos/features
-         * - Botones de perfil y logout
+         * Pantalla principal con Bottom Navigation Bar.
+         * Contiene 5 tabs: Inicio, Productos, Carrito, Pedidos, Perfil.
          *
          * Solo accesible tras autenticación exitosa.
          */
         composable("home") {
-            HomeScreen(
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onNavigateToProductosList = {
-                    navController.navigate("productos_list")
-                },
-                onNavigateToCreateProducto = {
-                    navController.navigate("create_producto")
-                },
-                onNavigateToCreateProductor = {
-                    navController.navigate("create_productor")
-                },
-                onNavigateToProductoresList = {
-                    navController.navigate("productores_list")
-                },
+            MainScreen(
                 onLogout = {
+                    // Navegar al login y limpiar todo el backstack
                     navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
-                }
-            )
-        }
-
-        /**
-         * Ruta: profile
-         *
-         * Pantalla de perfil del usuario. Muestra:
-         * - Datos del usuario (nombre, email)
-         * - Fecha de registro
-         * - Último acceso
-         *
-         * Navegación estándar, permite volver a home con navigateUp().
-         */
-        composable("profile") {
-            ProfileScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                }
-            )
-        }
-
-        /**
-         * Ruta: productos_list
-         *
-         * Lista de productos con filtros de búsqueda.
-         * Permite buscar por nombre, filtrar por productor y rango de precios.
-         */
-        composable("productos_list") {
-            ProductosListScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onProductClick = { productId ->
-                    // TODO: Navegar a detalles del producto
-                    // navController.navigate("producto_detail/$productId")
-                }
-            )
-        }
-
-        /**
-         * Ruta: create_producto
-         *
-         * Formulario para crear un nuevo producto.
-         * Solo accesible para usuarios con rol PRODUCTOR.
-         */
-        composable("create_producto") {
-            CreateProductoScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onProductoCreated = {
-                    // Navegar de vuelta a la lista de productos
-                    navController.popBackStack("productos_list", inclusive = false)
-                }
-            )
-        }
-
-        /**
-         * Ruta: create_productor
-         *
-         * Formulario para crear un nuevo productor.
-         * Solo accesible para usuarios con rol ADMIN.
-         */
-        composable("create_productor") {
-            CreateProductorScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onProductorCreated = {
-                    // Navegar de vuelta al home
-                    navController.popBackStack("home", inclusive = false)
-                }
-            )
-        }
-
-        /**
-         * Ruta: productores_list
-         *
-         * Lista de todos los productores registrados.
-         * Muestra información de cada productor y permite eliminarlos.
-         */
-        composable("productores_list") {
-            ProductoresListScreen(
-                onNavigateBack = {
-                    navController.navigateUp()
-                },
-                onProductorClick = { productorId ->
-                    // TODO: Navegar a detalles del productor
-                    // navController.navigate("productor_detail/$productorId")
                 }
             )
         }

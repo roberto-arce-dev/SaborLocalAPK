@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MiAppModular" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MiAppModular" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Status bar blanca con iconos oscuros -->
+        <item name="android:statusBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Navigation bar blanca con iconos oscuros -->
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
 </resources>

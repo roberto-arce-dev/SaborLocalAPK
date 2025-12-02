@@ -3,8 +3,12 @@ package com.example.miappmodular.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -14,13 +18,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.miappmodular.model.Producto
+import com.example.miappmodular.ui.components.FiltersBottomSheet
+import com.example.miappmodular.ui.components.ProductDetailSheet
+import com.example.miappmodular.ui.components.StandardScaffold
 import com.example.miappmodular.viewmodel.ProductosListUiState
 import com.example.miappmodular.viewmodel.ProductosListViewModel
 
@@ -42,33 +52,65 @@ fun ProductosListScreen(
 
     var showFilters by remember { mutableStateOf(false) }
     var showProductorMenu by remember { mutableStateOf(false) }
+    
+    // Estado para el detalle de producto (Bottom Sheet)
+    var selectedProduct by remember { mutableStateOf<Producto?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Productos") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showFilters = !showFilters }) {
-                        Icon(
-                            if (showFilters) Icons.Default.FilterAltOff else Icons.Default.FilterAlt,
-                            contentDescription = "Filtros"
-                        )
-                    }
-                    IconButton(onClick = { viewModel.loadProductos() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Bottom Sheet de detalle
+    if (selectedProduct != null) {
+        ProductDetailSheet(
+            producto = selectedProduct!!,
+            onDismissRequest = { selectedProduct = null },
+            onAddToCart = { producto ->
+                com.example.miappmodular.data.local.CarritoManager.addItem(producto)
+                android.widget.Toast.makeText(
+                    context,
+                    "Producto agregado al carrito",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                selectedProduct = null
+                // Opcional: Navegar al carrito o mostrar snackbar
+            }
+        )
+    }
+
+    // Bottom Sheet de Filtros
+    if (showFilters) {
+        FiltersBottomSheet(
+            onDismissRequest = { showFilters = false },
+            onApplyFilters = {
+                // viewModel.applyFilters() // Assuming apply happens reactively or here
+                showFilters = false
+            },
+            minPrice = minPrice,
+            maxPrice = maxPrice,
+            onPriceRangeChange = { range ->
+                viewModel.onMinPriceChange(range.start.toDouble())
+                viewModel.onMaxPriceChange(range.endInclusive.toDouble())
+            }
+        )
+    }
+
+    StandardScaffold(
+        title = "Productos",
+        onNavigateBack = onNavigateBack,
+        actionContent = {
+            // Acciones: Filtros + Refresh
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { showFilters = !showFilters }) {
+                    Icon(
+                        if (showFilters) Icons.Default.FilterAltOff else Icons.Default.FilterAlt,
+                        contentDescription = "Filtros"
+                    )
+                }
+                IconButton(onClick = { viewModel.loadProductos() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -93,117 +135,13 @@ fun ProductosListScreen(
                         }
                     }
                 },
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                )
             )
-
-            // Panel de filtros expandible
-            if (showFilters) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Filtros",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Filtro por productor
-                        Box {
-                            OutlinedTextField(
-                                value = selectedProductor?.let { id ->
-                                    viewModel.getProductores().find { it.first == id }?.second
-                                } ?: "Todos los productores",
-                                onValueChange = {},
-                                modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Productor") },
-                                readOnly = true,
-                                trailingIcon = {
-                                    IconButton(onClick = { showProductorMenu = true }) {
-                                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Seleccionar")
-                                    }
-                                }
-                            )
-
-                            DropdownMenu(
-                                expanded = showProductorMenu,
-                                onDismissRequest = { showProductorMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Todos los productores") },
-                                    onClick = {
-                                        viewModel.onProductorFilterChange(null)
-                                        showProductorMenu = false
-                                    }
-                                )
-                                viewModel.getProductores().forEach { (id, nombre) ->
-                                    DropdownMenuItem(
-                                        text = { Text(nombre) },
-                                        onClick = {
-                                            viewModel.onProductorFilterChange(id)
-                                            showProductorMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Filtros de precio
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = minPrice?.toString() ?: "",
-                                onValueChange = {
-                                    viewModel.onMinPriceChange(it.toDoubleOrNull())
-                                },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Precio mín.") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-
-                            OutlinedTextField(
-                                value = maxPrice?.toString() ?: "",
-                                onValueChange = {
-                                    viewModel.onMaxPriceChange(it.toDoubleOrNull())
-                                },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Precio máx.") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Botón limpiar filtros
-                        Button(
-                            onClick = { viewModel.clearFilters() },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Limpiar filtros")
-                        }
-                    }
-                }
-            }
 
             // Contenido principal
             when (val state = uiState) {
@@ -270,16 +208,29 @@ fun ProductosListScreen(
                 }
 
                 is ProductosListUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(state.productos) { producto ->
-                            ProductoCard(
-                                producto = producto,
-                                onClick = { onProductClick(producto.id) }
-                            )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        // Título estilo "1001 Products Are Available"
+                        Text(
+                            text = "${state.productos.size} Productos\nDisponibles",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            lineHeight = MaterialTheme.typography.headlineMedium.fontSize * 1.1
+                        )
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(state.productos) { producto ->
+                                ProductoCardGrid(
+                                    producto = producto,
+                                    onClick = { selectedProduct = producto }
+                                )
+                            }
                         }
                     }
                 }
@@ -289,88 +240,104 @@ fun ProductosListScreen(
 }
 
 @Composable
-fun ProductoCard(
+fun ProductoCardGrid(
     producto: Producto,
     onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable(onClick = onClick)
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(24.dp),
+                spotColor = Color(0x1A000000) // Sombra muy suave
+            ),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
+        Column(
+            modifier = Modifier.padding(12.dp)
         ) {
-            // Imagen del producto
-            AsyncImage(
-                model = producto.imagenThumbnail ?: producto.imagen,
-                contentDescription = producto.nombre,
+            // Contenedor de Imagen y Favorito
+            Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop
-            )
+                    .fillMaxWidth()
+                    .aspectRatio(1f) // Relación de aspecto cuadrada 1:1
+            ) {
+                // Botón Favorito (Visual)
+                Icon(
+                    imageVector = Icons.Outlined.FavoriteBorder,
+                    contentDescription = "Favorito",
+                    tint = Color.Gray,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(24.dp)
+                )
 
-            Spacer(modifier = Modifier.width(12.dp))
+                // Imagen del producto
+                AsyncImage(
+                    model = producto.imagenThumbnail ?: producto.imagen,
+                    contentDescription = producto.nombre,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 16.dp, bottom = 8.dp) // Espacio para el icono
+                        .clip(RoundedCornerShape(16.dp)),
+                    contentScale = ContentScale.Fit // Fit para ver el producto completo como en la ref
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Información del producto
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Nombre
+            Column {
                 Text(
                     text = producto.nombre,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color(0xFF1A1A1A)
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Productor
+                
                 Text(
-                    text = "Por: ${producto.productor.nombre}",
+                    text = producto.productor.getDisplayName(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Precio y stock
+                // Precio y Botón de compra
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "$${producto.precio} / ${producto.unidad}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        text = "$${producto.precio.toInt()}", // Precio entero para estilo limpio
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Indicador de stock
+                    // Botón "Bag" pequeño
                     Surface(
-                        color = if (producto.stock > 0)
-                            MaterialTheme.colorScheme.primaryContainer
-                        else
-                            MaterialTheme.colorScheme.errorContainer,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = CircleShape,
+                        color = if (producto.stock > 0) MaterialTheme.colorScheme.primary else Color.LightGray,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = if (producto.stock > 0) "Stock: ${producto.stock}" else "Sin stock",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (producto.stock > 0)
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            else
-                                MaterialTheme.colorScheme.onErrorContainer
+                        Icon(
+                            imageVector = Icons.Outlined.ShoppingBag,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .size(16.dp)
                         )
                     }
                 }

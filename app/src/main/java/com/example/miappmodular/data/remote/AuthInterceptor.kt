@@ -66,6 +66,22 @@ class AuthInterceptor(
             .build()
 
         // Continuar con la petición autenticada
-        return chain.proceed(authenticatedRequest)
+        val response = chain.proceed(authenticatedRequest)
+
+        // Verificar si el token ha expirado o es inválido (401 Unauthorized)
+        // IMPORTANTE: Solo limpiamos el token si NO es un endpoint de autenticación
+        // (login/register pueden retornar 401 por credenciales inválidas, no token expirado)
+        if (response.code == 401) {
+            val requestPath = originalRequest.url.encodedPath
+            val isAuthEndpoint = requestPath.contains("/login") ||
+                                requestPath.contains("/register")
+
+            if (!isAuthEndpoint) {
+                // Token expirado/inválido en endpoint protegido → forzar re-login
+                tokenManager.clearToken()
+            }
+        }
+
+        return response
     }
 }

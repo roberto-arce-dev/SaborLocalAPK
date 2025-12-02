@@ -1,7 +1,7 @@
 [versions]
 accompanistPermissions = "0.37.3"
 activityComposeVersion = "1.8.2"
-agp = "8.13.0"
+agp = "8.13.1"
 androidxJunit = "1.1.5"
 composeBomVersion = "2024.02.00"
 coreKtxVersion = "1.12.0"
@@ -34,6 +34,7 @@ hilt = "2.52"
 hiltNavigationCompose = "1.2.0"
 securityCrypto = "1.1.0-alpha06"
 ksp = "2.1.0-1.0.29"
+ui = "1.9.5"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -85,6 +86,7 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

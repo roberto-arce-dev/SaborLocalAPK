@@ -1,32 +1,23 @@
 package com.example.miappmodular.data.remote.dto.pedido
 
-import com.example.miappmodular.data.remote.dto.producto.ProductoDto
-
 /**
- * Item de producto en un pedido
+ * Item de producto en un pedido según la respuesta REAL del backend
+ *
+ * **Estructura real del backend:**
+ * ```json
+ * {
+ *   "producto": "6925bc737664a9a746935994",  // String ID
+ *   "cantidad": 1,
+ *   "precio": 1500
+ * }
+ * ```
+ *
+ * **Nota:** El backend SaborLocal retorna solo el ID del producto,
+ * no el objeto completo. El nombre y otros datos se deben obtener
+ * haciendo una petición GET /api/producto/{id} si es necesario.
  */
 data class PedidoItemDto(
-    val producto: Any,  // Puede ser String (ID) o ProductoDto (populated)
+    val producto: String,  // ✅ Backend retorna "producto" (String ID), no "productoId"
     val cantidad: Int,
     val precio: Double
-) {
-    fun getProductoPopulated(): ProductoDto? {
-        return when (producto) {
-            is Map<*, *> -> {
-                val map = producto as Map<String, Any>
-                ProductoDto(
-                    id = map["_id"] as? String ?: "",
-                    nombre = map["nombre"] as? String ?: "",
-                    descripcion = map["descripcion"] as? String ?: "",
-                    precio = (map["precio"] as? Number)?.toDouble() ?: 0.0,
-                    unidad = map["unidad"] as? String ?: "",
-                    stock = (map["stock"] as? Number)?.toInt() ?: 0,
-                    productor = map["productor"] ?: "",
-                    imagen = map["imagen"] as? String,
-                    imagenThumbnail = map["imagenThumbnail"] as? String
-                )
-            }
-            else -> null
-        }
-    }
-}
+)

@@ -30,7 +30,9 @@ class SplashViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     /**
+    /**
      * Verifica si hay una sesión activa
+     */
      */
     private fun checkSession() {
         viewModelScope.launch {

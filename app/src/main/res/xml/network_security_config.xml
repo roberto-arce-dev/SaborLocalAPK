@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!--
-        Configuración de seguridad de red para desarrollo local
+        Configuración de seguridad de red para desarrollo local y producción
 
-        IMPORTANTE: Esta configuración permite tráfico HTTP (cleartext) para desarrollo.
-        En producción, SIEMPRE usa HTTPS.
+        IMPORTANTE: Esta configuración permite:
+        - HTTP (cleartext) SOLO para localhost (desarrollo)
+        - HTTPS para todos los dominios externos (producción)
     -->
 
-    <!-- Configuración para desarrollo: permite HTTP a localhost -->
+    <!-- Configuración para desarrollo: permite HTTP SOLO a localhost -->
     <domain-config cleartextTrafficPermitted="true">
         <!-- 10.0.2.2 es la IP especial del emulador Android para acceder al localhost del host -->
         <domain includeSubdomains="true">10.0.2.2</domain>
@@ -25,12 +26,16 @@
     </domain-config>
 
     <!--
-        Configuración base: bloquea HTTP para todos los demás dominios
-        Esto asegura que solo los dominios listados arriba puedan usar HTTP
+        Configuración base: permite HTTPS para todos los demás dominios
+        HTTP está bloqueado excepto para los dominios listados arriba
+
+        Esto permite conexiones seguras a:
+        - saborloca-api.onrender.com
+        - Cualquier otro dominio con HTTPS válido
     -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
-            <!-- Confía en certificados del sistema (CAs oficiales) -->
+            <!-- Confía en certificados del sistema (CAs oficiales como Let's Encrypt, etc.) -->
             <certificates src="system" />
         </trust-anchors>
     </base-config>

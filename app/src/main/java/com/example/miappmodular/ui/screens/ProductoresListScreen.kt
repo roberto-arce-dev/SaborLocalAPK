@@ -3,16 +3,19 @@ package com.example.miappmodular.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.miappmodular.model.User
+import com.example.miappmodular.ui.components.StandardScaffold
 import com.example.miappmodular.viewmodel.ProductoresListUiState
 import com.example.miappmodular.viewmodel.ProductoresListViewModel
 
@@ -31,19 +34,33 @@ fun ProductoresListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Productores") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { viewModel.loadProductores() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
-                    }
+            // Usamos Box aquí porque tenemos FAB, no podemos usar StandardScaffold directamente
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
+            ) {
+                IconButton(
+                    onClick = onNavigateBack,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                 }
-            )
+
+                Text(
+                    text = "Productores",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+
+                IconButton(
+                    onClick = { viewModel.loadProductores() },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -203,7 +220,9 @@ fun ProductorCard(
 
     Card(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
@@ -211,97 +230,64 @@ fun ProductorCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icono del productor
+            // Avatar
             Surface(
-                modifier = Modifier.size(56.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.primaryContainer
+                modifier = Modifier.size(60.dp),
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Agriculture,
-                        contentDescription = null,
-                        modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    Text(
+                        text = productor.getDisplayName().take(1).uppercase(),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Información del productor
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            // Info
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = productor.nombre,
+                    text = productor.getDisplayName(),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Mostrar ubicación si existe
-                productor.ubicacion?.let { ubicacion ->
+                
+                productor.ubicacion?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            Icons.Default.LocationOn, 
+                            contentDescription = null, 
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.Gray
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = ubicacion,
+                            text = it,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.Gray
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
                 }
-
-                // Mostrar teléfono si existe
-                productor.telefono?.let { telefono ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Phone,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = telefono,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                }
-
-                // Email siempre se muestra
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Email,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = productor.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = productor.email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
 
-            // Botón de eliminar (actualmente deshabilitado)
+            // Action (Delete)
             IconButton(onClick = { showDeleteDialog = true }) {
                 Icon(
-                    Icons.Default.Delete,
+                    Icons.Default.DeleteOutline,
                     contentDescription = "Eliminar",
-                    tint = MaterialTheme.colorScheme.error
+                    tint = Color(0xFFFF5252) // Red color
                 )
             }
         }
@@ -322,7 +308,7 @@ fun ProductorCard(
                 Text("Eliminar productor")
             },
             text = {
-                Text("¿Estás seguro que deseas eliminar a ${productor.nombre}? Esta acción no se puede deshacer.")
+                Text("¿Estás seguro que deseas eliminar a ${productor.getDisplayName()}? Esta acción no se puede deshacer.")
             },
             confirmButton = {
                 Button(

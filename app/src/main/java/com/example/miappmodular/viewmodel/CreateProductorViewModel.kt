@@ -3,6 +3,7 @@ package com.example.miappmodular.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.model.User
 import com.example.miappmodular.repository.AuthSaborLocalRepository
 import com.example.miappmodular.utils.ValidationUtils
@@ -60,7 +61,9 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     val telefonoError: StateFlow<String?> = _telefonoError.asStateFlow()
 
     /**
+    /**
      * Actualiza el nombre y valida
+     */
      */
     fun onNombreChange(newNombre: String) {
         _nombre.value = newNombre
@@ -68,7 +71,9 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Actualiza el email y valida
+     */
      */
     fun onEmailChange(newEmail: String) {
         _email.value = newEmail
@@ -76,7 +81,9 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Actualiza la contraseña y valida
+     */
      */
     fun onPasswordChange(newPassword: String) {
         _password.value = newPassword
@@ -84,7 +91,9 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Actualiza la ubicación y valida
+     */
      */
     fun onUbicacionChange(newUbicacion: String) {
         _ubicacion.value = newUbicacion
@@ -92,7 +101,9 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Actualiza el teléfono y valida
+     */
      */
     fun onTelefonoChange(newTelefono: String) {
         _telefono.value = newTelefono
@@ -100,8 +111,10 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Crea un nuevo productor
      * Esta operación requiere token de ADMIN
+     */
      */
     fun createProductor() {
         // Validar todos los campos usando ValidationUtils
@@ -136,23 +149,26 @@ class CreateProductorViewModel(application: Application) : AndroidViewModel(appl
                 telefono = _telefono.value
             )
 
-            _uiState.value = if (result.isSuccess) {
-                CreateProductorUiState.Success(result.getOrNull()!!)
-            } else {
-                CreateProductorUiState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+            _uiState.value = when (result) {
+                is ApiResult.Success -> CreateProductorUiState.Success(result.data)
+                is ApiResult.Error -> CreateProductorUiState.Error(result.message)
             }
         }
     }
 
     /**
+    /**
      * Resetea el estado a Idle
+     */
      */
     fun resetState() {
         _uiState.value = CreateProductorUiState.Idle
     }
 
     /**
+    /**
      * Limpia el formulario
+     */
      */
     fun clearForm() {
         _nombre.value = ""
