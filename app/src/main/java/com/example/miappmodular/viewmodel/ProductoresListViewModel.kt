@@ -3,6 +3,7 @@ package com.example.miappmodular.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.model.User
 import com.example.miappmodular.repository.AuthSaborLocalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,36 +35,42 @@ class ProductoresListViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Carga la lista de usuarios PRODUCTOR
+     */
      */
     fun loadProductores() {
         _uiState.value = ProductoresListUiState.Loading
 
         viewModelScope.launch {
-            val result = repository.getAllUsers()
+            when (val result = repository.getAllUsers()) {
+                is ApiResult.Success -> {
+                    // Filtrar solo usuarios con rol PRODUCTOR
+                    val productores = result.data.filter { it.isProductor() }
 
-            result.onSuccess { users ->
-                // Filtrar solo usuarios con rol PRODUCTOR
-                val productores = users.filter { it.isProductor() }
+                    allProductores = productores
 
-                allProductores = productores
-
-                _uiState.value = if (productores.isEmpty()) {
-                    ProductoresListUiState.Empty
-                } else {
-                    applyFilters()
-                    ProductoresListUiState.Success(productores)
+                    _uiState.value = if (productores.isEmpty()) {
+                        ProductoresListUiState.Empty
+                    } else {
+                        applyFilters()
+                        ProductoresListUiState.Success(productores)
+                    }
                 }
-            }.onFailure { error ->
-                _uiState.value = ProductoresListUiState.Error(
-                    error.message ?: "Error desconocido al cargar productores"
-                )
+
+                is ApiResult.Error -> {
+                    _uiState.value = ProductoresListUiState.Error(
+                        result.message
+                    )
+                }
             }
         }
     }
 
     /**
+    /**
      * Actualiza el query de búsqueda
+     */
      */
     fun onSearchQueryChange(query: String) {
         _searchQuery.value = query
@@ -71,7 +78,9 @@ class ProductoresListViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Aplica los filtros de búsqueda
+     */
      */
     private fun applyFilters() {
         var filtered = allProductores
@@ -79,7 +88,7 @@ class ProductoresListViewModel(application: Application) : AndroidViewModel(appl
         // Filtro por nombre, ubicación o email
         if (_searchQuery.value.isNotBlank()) {
             filtered = filtered.filter {
-                it.nombre.contains(_searchQuery.value, ignoreCase = true) ||
+                (it.nombre?.contains(_searchQuery.value, ignoreCase = true) ?: false) ||
                 (it.ubicacion?.contains(_searchQuery.value, ignoreCase = true) ?: false) ||
                 it.email.contains(_searchQuery.value, ignoreCase = true)
             }
@@ -93,7 +102,9 @@ class ProductoresListViewModel(application: Application) : AndroidViewModel(appl
     }
 
     /**
+    /**
      * Elimina un productor (TODO: implementar endpoint para eliminar usuarios)
+     */
      */
     fun deleteProductor(id: String) {
         // Por ahora, simplemente mostrar error ya que no hay endpoint para eliminar usuarios

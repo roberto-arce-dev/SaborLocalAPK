@@ -6,7 +6,17 @@ import com.google.gson.annotations.SerializedName
 /**
  * DTO para Producto
  * Representa un producto agrícola que se vende en la plataforma.
- * Puede incluir el productor completo (populate) o solo el ID.
+ *
+ * **Estructura variable según el endpoint:**
+ * - `/producto` → `productor` es objeto parcial: `{_id, telefono}`
+ * - `/producto/productor/{id}` → `productorId` es String (solo ID)
+ *
+ * **IMPORTANTE:** El campo `productor` puede ser:
+ * - String (solo ID)
+ * - Map con {_id, telefono} (objeto parcial)
+ * - Map completo con todos los campos (objeto populado)
+ *
+ * Usamos `Any` para manejar todos los casos.
  */
 data class ProductoDto(
     @SerializedName("_id")
@@ -15,37 +25,17 @@ data class ProductoDto(
     val descripcion: String,
     val precio: Double,
     val unidad: String,  // kg, unidad, litro, etc.
+    val categoria: String? = null,  // verduras, frutas, lacteos, etc.
+    val productor: Any,  // Puede ser String (ID) o Map (objeto parcial/completo)
+    val disponible: Boolean = true,
     val stock: Int,
-    val productor: Any,  // Puede ser String (ID) o ProductorDto (populated)
     val imagen: String? = null,
     val imagenThumbnail: String? = null,
     val createdAt: String? = null,
     val updatedAt: String? = null
 ) {
     /**
-     * Helper para obtener el productor si fue populated
-     */
-    fun getProductorPopulated(): ProductorDto? {
-        return when (productor) {
-            is Map<*, *> -> {
-                // Convert map to ProductorDto
-                val map = productor as Map<String, Any>
-                ProductorDto(
-                    id = map["_id"] as? String ?: "",
-                    nombre = map["nombre"] as? String ?: "",
-                    ubicacion = map["ubicacion"] as? String ?: "",
-                    telefono = map["telefono"] as? String ?: "",
-                    email = map["email"] as? String ?: "",
-                    imagen = map["imagen"] as? String,
-                    imagenThumbnail = map["imagenThumbnail"] as? String
-                )
-            }
-            else -> null
-        }
-    }
-
-    /**
-     * Helper para obtener el ID del productor
+     * Obtiene el ID del productor, sin importar el formato
      */
     fun getProductorId(): String {
         return when (productor) {

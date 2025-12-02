@@ -13,9 +13,24 @@ interface SaborLocalPedidoApiService {
     /**
      * Obtiene la lista de todos los pedidos
      * GET /api/pedido
+     *
+     * Nota: El backend filtra automáticamente por usuario según el token JWT
+     * - CLIENTE: Solo ve sus propios pedidos
+     * - ADMIN: Ve todos los pedidos del sistema
      */
     @GET("pedido")
     suspend fun getPedidos(): Response<ApiResponse<List<PedidoDto>>>
+
+    /**
+     * Obtiene el historial de pedidos de un cliente específico
+     * GET /api/pedido/cliente/{clienteId}
+     *
+     * Endpoint clave para EP3: Permite al cliente ver su historial completo de pedidos
+     */
+    @GET("pedido/cliente/{clienteId}")
+    suspend fun getPedidosByCliente(
+        @Path("clienteId") clienteId: String
+    ): Response<ApiResponse<List<PedidoDto>>>
 
     /**
      * Obtiene un pedido específico por ID

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.miappmodular.ui.components.StandardScaffold
 import com.example.miappmodular.viewmodel.CreateProductoUiState
 import com.example.miappmodular.viewmodel.CreateProductoViewModel
 
@@ -48,21 +49,9 @@ fun CreateProductoScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Crear Producto") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+    StandardScaffold(
+        title = "Crear Producto",
+        onNavigateBack = onNavigateBack
     ) { paddingValues ->
         Column(
             modifier = Modifier

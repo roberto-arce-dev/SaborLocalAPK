@@ -3,6 +3,9 @@ package com.example.miappmodular.data.remote
 import android.content.Context
 import com.example.miappmodular.data.local.TokenManager
 import com.example.miappmodular.data.remote.api.*
+import com.example.miappmodular.data.remote.dto.pedido.ClienteDto
+import com.example.miappmodular.data.remote.dto.pedido.ClienteDtoDeserializer
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -25,7 +28,7 @@ import java.util.concurrent.TimeUnit
  * - **TokenManager:** Gestión segura de tokens JWT con encriptación
  * - **AuthInterceptor:** Añade automáticamente el token a las peticiones
  * - **Logging:** Registra requests/responses para debugging
- * - **Timeouts:** 30 segundos para conexión, lectura y escritura
+ * - **Timeouts:** Aumentados para Render.com (60s conexión, 90s lectura, 60s escritura)
  *
  * **Ejemplo de uso en MainActivity:**
  * ```kotlin
@@ -67,7 +70,7 @@ object RetrofitClient {
      * Si usas un dispositivo físico, cambia esto por la IP de tu computadora
      * en la red local (ej: 192.168.1.X:3008).
      */
-    private const val BASE_URL = "https://saborlocalcostarica.up.railway.app/api/"
+    private const val BASE_URL = "https://saborloca-api.onrender.com/api/"
 
     /**
      * TokenManager para gestión segura de tokens JWT.
@@ -103,7 +106,10 @@ object RetrofitClient {
      * **Configuración:**
      * 1. **AuthInterceptor:** Añade automáticamente el header Authorization con el JWT token
      * 2. **HttpLoggingInterceptor:** Registra todas las peticiones y respuestas (útil para debugging)
-     * 3. **Timeouts:** 30 segundos para conexión, lectura y escritura
+     * 3. **Timeouts aumentados para Render.com free tier:**
+     *    - connectTimeout: 60s (para cold starts)
+     *    - readTimeout: 90s (para operaciones lentas)
+     *    - writeTimeout: 60s (para uploads grandes)
      *
      * **Lazy initialization:**
      * Se crea solo cuando se accede por primera vez. Thread-safe por defecto en Kotlin.
@@ -120,10 +126,23 @@ object RetrofitClient {
         OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)  // Aumentado para cold starts de Render
+            .readTimeout(90, TimeUnit.SECONDS)     // Aumentado para operaciones lentas
+            .writeTimeout(60, TimeUnit.SECONDS)    // Aumentado para uploads grandes
             .build()
+    }
+
+    /**
+     * Configuración personalizada de Gson con deserializadores custom.
+     *
+     * **ClienteDtoDeserializer:**
+     * Maneja el caso donde el backend retorna `cliente` como String en listas
+     * y como Object en detalles (debido a .populate() de MongoDB).
+     */
+    private val gson by lazy {
+        GsonBuilder()
+            .registerTypeAdapter(ClienteDto::class.java, ClienteDtoDeserializer())
+            .create()
     }
 
     /**
@@ -142,7 +161,7 @@ object RetrofitClient {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
     }
 

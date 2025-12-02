@@ -3,6 +3,7 @@ package com.example.miappmodular.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.model.User
 import com.example.miappmodular.repository.AuthSaborLocalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,35 +38,45 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     val password: StateFlow<String> = _password.asStateFlow()
 
     /**
+    /**
      * Actualiza el email del formulario
+     */
      */
     fun onEmailChange(newEmail: String) {
         _email.value = newEmail
     }
 
     /**
+    /**
      * Actualiza la contraseña del formulario
+     */
      */
     fun onPasswordChange(newPassword: String) {
         _password.value = newPassword
     }
 
     /**
+    /**
      * Verifica si hay una sesión activa
+     */
      */
     fun isLoggedIn(): Boolean {
         return repository.isLoggedIn()
     }
 
     /**
+    /**
      * Obtiene el usuario actual de la sesión
+     */
      */
     fun getCurrentUser(): User? {
         return repository.getCurrentUser()
     }
 
     /**
+    /**
      * Realiza el login con email y password
+     */
      */
     fun login() {
         // Validar campos
@@ -85,23 +96,26 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = repository.login(_email.value, _password.value)
 
-            _uiState.value = if (result.isSuccess) {
-                LoginUiState.Success(result.getOrNull()!!)
-            } else {
-                LoginUiState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+            _uiState.value = when (result) {
+                is ApiResult.Success -> LoginUiState.Success(result.data)
+                is ApiResult.Error -> LoginUiState.Error(result.message)
             }
         }
     }
 
     /**
+    /**
      * Resetea el estado a Idle
+     */
      */
     fun resetState() {
         _uiState.value = LoginUiState.Idle
     }
 
     /**
+    /**
      * Limpia los campos del formulario
+     */
      */
     fun clearForm() {
         _email.value = ""

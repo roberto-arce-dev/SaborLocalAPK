@@ -97,17 +97,19 @@ class TokenManager(private val context: Context) {
     /**
      * Obtiene el usuario guardado en sesión
      * Retorna null si no hay sesión activa
+     *
+     * IMPORTANTE: El nombre puede ser null (algunos usuarios no tienen nombre en el backend)
      */
     fun getCurrentUser(): User? {
         val token = getToken() ?: return null
         val userId = encryptedPrefs.getString(KEY_USER_ID, null) ?: return null
-        val userName = encryptedPrefs.getString(KEY_USER_NAME, null) ?: return null
+        val userName = encryptedPrefs.getString(KEY_USER_NAME, null) // ✅ Permitir null
         val userEmail = encryptedPrefs.getString(KEY_USER_EMAIL, null) ?: return null
         val userRole = encryptedPrefs.getString(KEY_USER_ROLE, null) ?: return null
 
         return User(
             id = userId,
-            nombre = userName,
+            nombre = userName, // ✅ Puede ser null
             email = userEmail,
             role = userRole
         )

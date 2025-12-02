@@ -15,23 +15,23 @@ interface SaborLocalProductorApiService {
      * Obtiene la lista de todos los productores
      * GET /api/productor
      */
-    @GET("productor")
+    @GET("productor-profile")
     suspend fun getProductores(): Response<ApiResponse<List<ProductorDto>>>
 
     /**
      * Obtiene un productor específico por ID
      * GET /api/productor/{id}
      */
-    @GET("productor/{id}")
+    @GET("productor-profile/{id}")
     suspend fun getProductor(
         @Path("id") id: String
     ): Response<ApiResponse<ProductorDto>>
 
     /**
      * Crea un nuevo productor
-     * POST /api/productor
+     * POST /api/productor-profile
      */
-    @POST("productor")
+    @POST("productor-profile")
     suspend fun createProductor(
         @Body request: CreateProductorRequest
     ): Response<ApiResponse<ProductorDto>>

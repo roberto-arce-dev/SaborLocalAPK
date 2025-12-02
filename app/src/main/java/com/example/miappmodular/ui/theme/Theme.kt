@@ -7,97 +7,150 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Esquema de color Light - Estilo shadcn.io
+/**
+ * Esquema de colores Light - SaborLocal
+ *
+ * Paleta inspirada en productos frescos, locales y sostenibles:
+ * - Verde bosque: Frescura y naturaleza
+ * - Naranja terracota: Calidez y comunidad local
+ * - Crema natural: Autenticidad y simplicidad
+ * - Marrones tierra: Conexión con productores locales
+ */
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
+    // ========= Primary (Verde Bosque) =========
+    primary = Primary,                      // Verde bosque #2D6A4F
     onPrimary = Color.White,
-    primaryContainer = PrimaryLight,
-    onPrimaryContainer = Color.White,
+    primaryContainer = LightGreen,          // Verde claro #D8F3DC
+    onPrimaryContainer = ForestGreen,
 
-    secondary = Slate600,
+    // ========= Secondary (Azul Suave) =========
+    secondary = Accent,                     // Azul suave #4A90E2
     onSecondary = Color.White,
-    secondaryContainer = Slate100,
-    onSecondaryContainer = Slate900,
+    secondaryContainer = LightBlue,         // Azul claro #E3F2FD
+    onSecondaryContainer = Color(0xFF1565C0),
 
-    tertiary = Accent,
+    // ========= Tertiary (Verde Menta) =========
+    tertiary = MintGreen,                   // Verde menta #52B788
     onTertiary = Color.White,
-    tertiaryContainer = InfoLight,
-    onTertiaryContainer = Slate900,
+    tertiaryContainer = PaleGreen,          // Verde pálido #F1FAF5
+    onTertiaryContainer = ForestGreen,
 
-    error = Destructive,
+    // ========= Error (Rojo Tomate) =========
+    error = Destructive,                    // Rojo tomate #DC3545
     onError = Color.White,
-    errorContainer = DestructiveLight,
-    onErrorContainer = Slate900,
+    errorContainer = DestructiveLight,      // Rojo claro #FFF0F0
+    onErrorContainer = Color(0xFF8B0000),
 
-    background = Background,
-    onBackground = Foreground,
+    // ========= Background (Crema Natural) =========
+    background = Color(0xFFF8F9FA),         // Blanco Humo #F8F9FA (casi blanco)
+    onBackground = Foreground,              // Gris carbón #2B2D31
 
-    surface = Surface,
-    onSurface = Foreground,
-    surfaceVariant = SurfaceVariant,
-    onSurfaceVariant = ForegroundMuted,
+    // ========= Surface (Blanco y Beige) =========
+    surface = Surface,                      // Blanco puro #FFFFFF
+    onSurface = Foreground,                 // Gris carbón
+    surfaceVariant = Color(0xFFFFFFFF),     // Blanco puro para variantes también
+    onSurfaceVariant = ForegroundMuted,     // Gris medio
 
-    outline = Border,
-    outlineVariant = Slate100,
+    // ========= Outline (Borders) =========
+    outline = Border,                       // Marrón claro #D4C4B0
+    outlineVariant = Beige,                 // Beige suave
 
-    inverseSurface = Slate900,
-    inverseOnSurface = Slate50,
-    inversePrimary = Slate200,
+    // ========= Inverse (Para snackbars, etc) =========
+    inverseSurface = ForestGreen,           // Verde bosque
+    inverseOnSurface = Color.White,
+    inversePrimary = MintGreen,             // Verde menta
 
-    surfaceTint = Accent,
+    // ========= Otros =========
+    surfaceTint = MintGreen,
     scrim = Color.Black.copy(alpha = 0.32f)
 )
 
-// Esquema de color Dark - Estilo shadcn.io
+/**
+ * Esquema de colores Dark - SaborLocal
+ *
+ * Modo oscuro con tonos cálidos que mantienen la identidad de marca.
+ */
 private val DarkColorScheme = darkColorScheme(
-    primary = Slate50,
-    onPrimary = Slate900,
-    primaryContainer = Slate800,
-    onPrimaryContainer = Slate50,
+    // ========= Primary =========
+    primary = MintGreen,                    // Verde menta más brillante
+    onPrimary = CharcoalGray,
+    primaryContainer = ForestGreen,         // Verde bosque oscuro
+    onPrimaryContainer = LightGreen,
 
-    secondary = Slate400,
-    onSecondary = Slate900,
-    secondaryContainer = Slate800,
-    onSecondaryContainer = Slate100,
+    // ========= Secondary =========
+    secondary = SkyBlue,                    // Azul cielo más brillante
+    onSecondary = CharcoalGray,
+    secondaryContainer = Color(0xFF1565C0), // Azul oscuro
+    onSecondaryContainer = LightBlue,
 
-    tertiary = Accent,
-    onTertiary = Color.White,
-    tertiaryContainer = Slate800,
-    onTertiaryContainer = InfoLight,
+    // ========= Tertiary =========
+    tertiary = MintGreen,
+    onTertiary = CharcoalGray,
+    tertiaryContainer = LeafGreen,
+    onTertiaryContainer = PaleGreen,
 
+    // ========= Error =========
     error = Destructive,
     onError = Color.White,
-    errorContainer = Color(0xFF7F1D1D), // red-900
+    errorContainer = Color(0xFF8B0000),     // Rojo oscuro
     onErrorContainer = DestructiveLight,
 
-    background = Slate950,
-    onBackground = Slate50,
+    // ========= Background =========
+    background = Color(0xFF1A1A1A),         // Casi negro cálido
+    onBackground = CreamBackground,
 
-    surface = Slate900,
-    onSurface = Slate50,
-    surfaceVariant = Slate800,
-    onSurfaceVariant = Slate400,
+    // ========= Surface =========
+    surface = Color(0xFF242424),            // Gris oscuro cálido
+    onSurface = CreamBackground,
+    surfaceVariant = Color(0xFF3A3A3A),
+    onSurfaceVariant = Beige,
 
-    outline = Slate700,
-    outlineVariant = Slate800,
+    // ========= Outline =========
+    outline = MediumBrown,
+    outlineVariant = EarthBrown,
 
-    inverseSurface = Slate50,
-    inverseOnSurface = Slate900,
-    inversePrimary = Slate700,
+    // ========= Inverse =========
+    inverseSurface = CreamSurface,
+    inverseOnSurface = CharcoalGray,
+    inversePrimary = ForestGreen,
 
-    surfaceTint = Accent,
+    // ========= Otros =========
+    surfaceTint = MintGreen,
     scrim = Color.Black.copy(alpha = 0.32f)
 )
 
-// Shapes estilo shadcn.io (esquinas sutilmente redondeadas)
+/**
+ * Shapes - Esquinas redondeadas inspiradas en productos naturales
+ *
+ * Bordes suaves que evocan la forma orgánica de frutas y verduras.
+ */
 val Shapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(6.dp),
-    medium = RoundedCornerShape(8.dp),
-    large = RoundedCornerShape(12.dp),
-    extraLarge = RoundedCornerShape(16.dp)
+    extraSmall = RoundedCornerShape(6.dp),   // Bordes sutiles
+    small = RoundedCornerShape(8.dp),        // Cards pequeños
+    medium = RoundedCornerShape(12.dp),      // Cards normales
+    large = RoundedCornerShape(16.dp),       // Cards grandes, imágenes
+    extraLarge = RoundedCornerShape(24.dp)   // Modales, sheets
 )
 
+/**
+ * Tema principal de SaborLocal
+ *
+ * **Características del diseño:**
+ * - Colores cálidos y naturales que evocan productos frescos
+ * - Verde principal para transmitir sostenibilidad y frescura
+ * - Naranja/terracota para crear calidez y energía local
+ * - Cremas y beiges para fondos acogedores y naturales
+ * - Marrones tierra para autenticidad y conexión con productores
+ *
+ * **Psicología aplicada:**
+ * - Verde → Confianza en productos orgánicos y saludables
+ * - Naranja → Accesibilidad y entusiasmo por apoyar lo local
+ * - Crema → Simplicidad y autenticidad artesanal
+ * - Tierra → Estabilidad y conexión directa con la fuente
+ *
+ * @param darkTheme Si debe usar el tema oscuro
+ * @param content Contenido de la app
+ */
 @Composable
 fun MiAppModularTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

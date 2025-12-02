@@ -10,29 +10,24 @@ package com.example.miappmodular.model
 
 /**
  * Modelo de dominio para Productor
+ *
+ * **IMPORTANTE:** Los campos pueden ser null dependiendo del endpoint:
+ * - `/producto` retorna productor parcial (solo _id y telefono)
+ * - `/productor-profile` retorna productor completo
  */
 data class Productor(
     val id: String,
-    val nombre: String,
-    val ubicacion: String,
-    val telefono: String,
-    val email: String,
+    val nombre: String? = null,
+    val ubicacion: String? = null,
+    val telefono: String? = null,
+    val email: String? = null,
     val imagen: String? = null,
     val imagenThumbnail: String? = null
 ) {
     /**
-     * Retorna la URL completa de la imagen
+     * Obtiene el nombre del productor o un valor por defecto
      */
-    fun getImagenUrl(baseUrl: String = "http://10.0.2.2:3008"): String? {
-        return imagen?.let { "$baseUrl/$it" }
-    }
-
-    /**
-     * Retorna la URL completa del thumbnail
-     */
-    fun getThumbnailUrl(baseUrl: String = "http://10.0.2.2:3008"): String? {
-        return imagenThumbnail?.let { "$baseUrl/$it" }
-    }
+    fun getDisplayName(): String = nombre ?: "Productor"
 }
 
 /**
@@ -62,20 +57,6 @@ data class Producto(
     fun tieneStock(): Boolean = stock > 0
 
     /**
-     * Retorna la URL completa de la imagen
-     */
-    fun getImagenUrl(baseUrl: String = "http://10.0.2.2:3008"): String? {
-        return imagen?.let { "$baseUrl/$it" }
-    }
-
-    /**
-     * Retorna la URL completa del thumbnail
-     */
-    fun getThumbnailUrl(baseUrl: String = "http://10.0.2.2:3008"): String? {
-        return imagenThumbnail?.let { "$baseUrl/$it" }
-    }
-
-    /**
      * Indica si el stock es bajo (menos de 10 unidades)
      */
     fun stockBajo(): Boolean = stock in 1..9
@@ -95,16 +76,24 @@ data class Cliente(
 /**
  * Modelo de dominio para Usuario
  * Representa un usuario autenticado del sistema
+ *
+ * **IMPORTANTE:** El campo `nombre` puede ser null.
+ * Algunos usuarios en el sistema no tienen nombre configurado.
  */
 data class User(
     val id: String,
-    val nombre: String,
+    val nombre: String? = null,  // ✅ Nullable - algunos usuarios no lo tienen
     val email: String,
     val role: String,  // CLIENTE, PRODUCTOR, ADMIN
     val telefono: String? = null,
     val ubicacion: String? = null,
     val direccion: String? = null
 ) {
+    /**
+     * Obtiene el nombre del usuario o un valor por defecto
+     */
+    fun getDisplayName(): String = nombre ?: email.substringBefore("@")
+
     /**
      * Verifica si el usuario es CLIENTE
      */
@@ -225,11 +214,19 @@ enum class EstadoEntrega(val displayName: String) {
 }
 
 /**
- * Resultado de una operación (Success/Error)
+ * Resultado de una operación de API o repositorio (Success/Error)
+ *
+ * Renombrado de `Result` a `ApiResult` para evitar colisión de nombres con
+ * `kotlin.Result` de la biblioteca estándar de Kotlin.
+ *
+ * Esto previene:
+ * - Ambigüedad en compilación que requiere imports explícitos
+ * - Confusión al leer código (¿cuál Result es este?)
+ * - Bugs potenciales al usar el tipo incorrecto de Result
  */
-sealed class Result<out T> {
-    data class Success<T>(val data: T) : Result<T>()
-    data class Error(val message: String, val exception: Throwable? = null) : Result<Nothing>()
+sealed class ApiResult<out T> {
+    data class Success<T>(val data: T) : ApiResult<T>()
+    data class Error(val message: String, val exception: Throwable? = null) : ApiResult<Nothing>()
 
     fun isSuccess(): Boolean = this is Success
     fun isError(): Boolean = this is Error

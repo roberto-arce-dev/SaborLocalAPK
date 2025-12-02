@@ -3,7 +3,7 @@ package com.example.miappmodular.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.miappmodular.model.Producto
-import com.example.miappmodular.model.Result
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.repository.ProductoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +49,9 @@ class ProductoViewModel : ViewModel() {
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
     /**
+    /**
      * Carga la lista de todos los productos
+     */
      */
     fun loadProductos() {
         viewModelScope.launch {
@@ -57,10 +59,10 @@ class ProductoViewModel : ViewModel() {
             _errorMessage.value = null
 
             when (val result = repository.getProductos()) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _productos.value = result.data
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = result.message
                 }
             }
@@ -70,7 +72,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Carga un producto específico por ID
+     */
      */
     fun loadProducto(id: String) {
         viewModelScope.launch {
@@ -78,10 +82,10 @@ class ProductoViewModel : ViewModel() {
             _errorMessage.value = null
 
             when (val result = repository.getProducto(id)) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _productoSeleccionado.value = result.data
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = result.message
                 }
             }
@@ -91,7 +95,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Crea un nuevo producto
+     */
      */
     fun createProducto(
         nombre: String,
@@ -108,11 +114,11 @@ class ProductoViewModel : ViewModel() {
             when (val result = repository.createProducto(
                 nombre, descripcion, precio, unidad, stock, productorId
             )) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _successMessage.value = "Producto creado exitosamente"
                     loadProductos() // Recargar lista
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = result.message
                 }
             }
@@ -122,7 +128,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Actualiza un producto existente
+     */
      */
     fun updateProducto(
         id: String,
@@ -136,11 +144,11 @@ class ProductoViewModel : ViewModel() {
             _errorMessage.value = null
 
             when (val result = repository.updateProducto(id, nombre, descripcion, precio, stock)) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _successMessage.value = "Producto actualizado exitosamente"
                     loadProductos() // Recargar lista
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = result.message
                 }
             }
@@ -150,7 +158,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Elimina un producto
+     */
      */
     fun deleteProducto(id: String) {
         viewModelScope.launch {
@@ -158,11 +168,11 @@ class ProductoViewModel : ViewModel() {
             _errorMessage.value = null
 
             when (repository.deleteProducto(id)) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _successMessage.value = "Producto eliminado exitosamente"
                     loadProductos() // Recargar lista
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = "Error al eliminar producto"
                 }
             }
@@ -172,7 +182,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Sube una imagen para un producto
+     */
      */
     fun uploadImage(id: String, imageFile: File) {
         viewModelScope.launch {
@@ -180,12 +192,12 @@ class ProductoViewModel : ViewModel() {
             _errorMessage.value = null
 
             when (val result = repository.uploadImage(id, imageFile)) {
-                is Result.Success -> {
+                is ApiResult.Success -> {
                     _successMessage.value = "Imagen subida exitosamente"
                     _productoSeleccionado.value = result.data
                     loadProductos() // Recargar lista
                 }
-                is Result.Error -> {
+                is ApiResult.Error -> {
                     _errorMessage.value = result.message
                 }
             }
@@ -195,21 +207,27 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Limpia el mensaje de error
+     */
      */
     fun clearErrorMessage() {
         _errorMessage.value = null
     }
 
     /**
+    /**
      * Limpia el mensaje de éxito
+     */
      */
     fun clearSuccessMessage() {
         _successMessage.value = null
     }
 
     /**
+    /**
      * Filtra productos por nombre
+     */
      */
     fun searchProductos(query: String): List<Producto> {
         return if (query.isBlank()) {
@@ -223,7 +241,9 @@ class ProductoViewModel : ViewModel() {
     }
 
     /**
+    /**
      * Filtra productos por productor
+     */
      */
     fun filterByProductor(productorId: String): List<Producto> {
         return _productos.value.filter { it.productor.id == productorId }

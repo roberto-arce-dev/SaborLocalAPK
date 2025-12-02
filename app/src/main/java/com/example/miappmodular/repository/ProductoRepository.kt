@@ -7,7 +7,7 @@ import com.example.miappmodular.data.remote.RetrofitClient
 import com.example.miappmodular.data.remote.dto.producto.CreateProductoRequest
 import com.example.miappmodular.data.remote.dto.producto.UpdateProductoRequest
 import com.example.miappmodular.model.Producto
-import com.example.miappmodular.model.Result
+import com.example.miappmodular.model.ApiResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -40,7 +40,7 @@ class ProductoRepository {
      *
      * @return Result con la lista de productos o error
      */
-    suspend fun getProductos(): Result<List<Producto>> = withContext(Dispatchers.IO) {
+    suspend fun getProductos(): ApiResult<List<Producto>> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getProductos()
 
@@ -48,16 +48,16 @@ class ProductoRepository {
                 val body = response.body()
                 if (body != null && body.success && body.data != null) {
                     val productos = body.data.toProductoDomainList()
-                    Result.Success(productos)
+                    ApiResult.Success(productos)
                 } else {
-                    Result.Error("No se pudieron obtener los productos")
+                    ApiResult.Error("No se pudieron obtener los productos")
                 }
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al obtener productos", e)
-            Result.Error("Error de red: ${e.message}", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -67,7 +67,7 @@ class ProductoRepository {
      * @param id ID del producto
      * @return Result con el producto o error
      */
-    suspend fun getProducto(id: String): Result<Producto> = withContext(Dispatchers.IO) {
+    suspend fun getProducto(id: String): ApiResult<Producto> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getProducto(id)
 
@@ -75,20 +75,46 @@ class ProductoRepository {
                 val body = response.body()
                 if (body != null && body.success && body.data != null) {
                     val producto = body.data.toDomain()
-                    if (producto != null) {
-                        Result.Success(producto)
-                    } else {
-                        Result.Error("No se pudo convertir el producto")
-                    }
+                    ApiResult.Success(producto)
                 } else {
-                    Result.Error("Producto no encontrado")
+                    ApiResult.Error("Producto no encontrado")
                 }
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al obtener producto", e)
-            Result.Error("Error de red: ${e.message}", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Obtiene el catálogo de productos de un productor específico
+     *
+     * **Endpoint clave para EP3:** GET /api/producto/productor/{productorId}
+     * Este endpoint retorna todos los productos que ofrece un productor.
+     *
+     * @param productorId ID del productor
+     * @return Result con la lista de productos del productor o error
+     */
+    suspend fun getProductosByProductor(productorId: String): ApiResult<List<Producto>> = withContext(Dispatchers.IO) {
+        try {
+            val response = apiService.getProductosByProductor(productorId)
+
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null && body.success && body.data != null) {
+                    val productos = body.data.toProductoDomainList()
+                    ApiResult.Success(productos)
+                } else {
+                    ApiResult.Error("No se pudieron obtener los productos del productor")
+                }
+            } else {
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
+            }
+        } catch (e: Exception) {
+            Log.e("ProductoRepository", "Error al obtener productos del productor", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -110,7 +136,7 @@ class ProductoRepository {
         unidad: String,
         stock: Int,
         productorId: String
-    ): Result<Producto> = withContext(Dispatchers.IO) {
+    ): ApiResult<Producto> = withContext(Dispatchers.IO) {
         try {
             val request = CreateProductoRequest(
                 nombre = nombre,
@@ -128,19 +154,19 @@ class ProductoRepository {
                 if (body != null && body.success && body.data != null) {
                     val producto = body.data.toDomain()
                     if (producto != null) {
-                        Result.Success(producto)
+                        ApiResult.Success(producto)
                     } else {
-                        Result.Error("No se pudo convertir el producto creado")
+                        ApiResult.Error("No se pudo convertir el producto creado")
                     }
                 } else {
-                    Result.Error("No se pudo crear el producto")
+                    ApiResult.Error("No se pudo crear el producto")
                 }
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al crear producto", e)
-            Result.Error("Error de red: ${e.message}", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -160,7 +186,7 @@ class ProductoRepository {
         descripcion: String? = null,
         precio: Double? = null,
         stock: Int? = null
-    ): Result<Producto> = withContext(Dispatchers.IO) {
+    ): ApiResult<Producto> = withContext(Dispatchers.IO) {
         try {
             val request = UpdateProductoRequest(
                 nombre = nombre,
@@ -176,19 +202,19 @@ class ProductoRepository {
                 if (body != null && body.success && body.data != null) {
                     val producto = body.data.toDomain()
                     if (producto != null) {
-                        Result.Success(producto)
+                        ApiResult.Success(producto)
                     } else {
-                        Result.Error("No se pudo convertir el producto actualizado")
+                        ApiResult.Error("No se pudo convertir el producto actualizado")
                     }
                 } else {
-                    Result.Error("No se pudo actualizar el producto")
+                    ApiResult.Error("No se pudo actualizar el producto")
                 }
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al actualizar producto", e)
-            Result.Error("Error de red: ${e.message}", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -198,18 +224,18 @@ class ProductoRepository {
      * @param id ID del producto
      * @return Result con éxito o error
      */
-    suspend fun deleteProducto(id: String): Result<Unit> = withContext(Dispatchers.IO) {
+    suspend fun deleteProducto(id: String): ApiResult<Unit> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.deleteProducto(id)
 
             if (response.isSuccessful) {
-                Result.Success(Unit)
+                ApiResult.Success(Unit)
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al eliminar producto", e)
-            Result.Error("Error de red: ${e.message}", e)
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -220,7 +246,7 @@ class ProductoRepository {
      * @param imageFile Archivo de imagen
      * @return Result con el producto actualizado o error
      */
-    suspend fun uploadImage(id: String, imageFile: File): Result<Producto> = withContext(Dispatchers.IO) {
+    suspend fun uploadImage(id: String, imageFile: File): ApiResult<Producto> = withContext(Dispatchers.IO) {
         try {
             val requestBody = imageFile.asRequestBody("image/*".toMediaTypeOrNull())
             val part = MultipartBody.Part.createFormData("file", imageFile.name, requestBody)
@@ -232,19 +258,19 @@ class ProductoRepository {
                 if (body != null && body.success && body.data != null) {
                     val producto = body.data.toDomain()
                     if (producto != null) {
-                        Result.Success(producto)
+                        ApiResult.Success(producto)
                     } else {
-                        Result.Error("No se pudo convertir el producto")
+                        ApiResult.Error("No se pudo convertir el producto")
                     }
                 } else {
-                    Result.Error("No se pudo subir la imagen")
+                    ApiResult.Error("No se pudo subir la imagen")
                 }
             } else {
-                Result.Error("Error HTTP ${response.code()}: ${response.message()}")
+                ApiResult.Error("Error HTTP ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
             Log.e("ProductoRepository", "Error al subir imagen", e)
-            Result.Error("Error al subir imagen: ${e.message}", e)
+            ApiResult.Error("Error al subir imagen: ${e.message}", e)
         }
     }
 }

@@ -4,6 +4,7 @@ import com.example.miappmodular.data.remote.RetrofitClient
 import com.example.miappmodular.data.remote.dto.auth.LoginSaborLocalRequest
 import com.example.miappmodular.data.remote.dto.auth.RegisterSaborLocalRequest
 import com.example.miappmodular.model.User
+import com.example.miappmodular.model.ApiResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -64,9 +65,9 @@ class AuthSaborLocalRepository {
      *
      * @param email Email del usuario
      * @param password Contraseña
-     * @return Result con el usuario autenticado
+     * @return ApiResult con el usuario autenticado
      */
-    suspend fun login(email: String, password: String): Result<User> = withContext(Dispatchers.IO) {
+    suspend fun login(email: String, password: String): ApiResult<User> = withContext(Dispatchers.IO) {
         try {
             val request = LoginSaborLocalRequest(email, password)
             val response = apiService.login(request)
@@ -86,9 +87,9 @@ class AuthSaborLocalRepository {
                         ubicacion = authData.user.ubicacion,
                         direccion = authData.user.direccion
                     )
-                    Result.success(user)
+                    ApiResult.Success(user)
                 } else {
-                    Result.failure(Exception(body?.message ?: "Error en login"))
+                    ApiResult.Error(body?.message ?: "Error en login")
                 }
             } else {
                 val errorMessage = when (response.code()) {
@@ -96,40 +97,51 @@ class AuthSaborLocalRepository {
                     404 -> "Usuario no encontrado"
                     else -> "Error HTTP ${response.code()}"
                 }
-                Result.failure(Exception(errorMessage))
+                ApiResult.Error(errorMessage)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de red: ${e.message}", e))
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
     /**
-     * Registro de nuevo CLIENTE
+     * Registro de nuevo usuario (CLIENTE o PRODUCTOR)
      *
-     * Solo CLIENTES pueden auto-registrarse.
-     * El rol se asigna automáticamente como CLIENTE en el backend.
+     * Permite auto-registro de CLIENTE y PRODUCTOR.
+     * El rol determina qué campos son obligatorios:
+     * - CLIENTE: email, password, role, nombre (telefono y direccion opcionales)
+     * - PRODUCTOR: email, password, role, nombre, nombreNegocio (obligatorio), descripcion (opcional)
      *
-     * @param nombre Nombre completo
      * @param email Email
      * @param password Contraseña
-     * @param telefono Teléfono (opcional)
+     * @param role Rol del usuario (CLIENTE o PRODUCTOR)
+     * @param nombre Nombre completo (CLIENTE) o nombre de contacto (PRODUCTOR)
+     * @param telefono Teléfono de contacto (opcional)
      * @param direccion Dirección (opcional)
-     * @return Result con el usuario registrado
+     * @param nombreNegocio Nombre del negocio (obligatorio para PRODUCTOR)
+     * @param descripcion Descripción del negocio (opcional para PRODUCTOR)
+     * @return ApiResult con el usuario registrado
      */
     suspend fun register(
-        nombre: String,
         email: String,
         password: String,
+        role: String = "CLIENTE",
+        nombre: String,
         telefono: String? = null,
-        direccion: String? = null
-    ): Result<User> = withContext(Dispatchers.IO) {
+        direccion: String? = null,
+        nombreNegocio: String? = null,
+        descripcion: String? = null
+    ): ApiResult<User> = withContext(Dispatchers.IO) {
         try {
             val request = RegisterSaborLocalRequest(
-                nombre = nombre,
                 email = email,
                 password = password,
+                role = role,
+                nombre = nombre,
                 telefono = telefono,
-                direccion = direccion
+                direccion = direccion,
+                nombreNegocio = nombreNegocio,
+                descripcion = descripcion
             )
             val response = apiService.register(request)
 
@@ -148,9 +160,9 @@ class AuthSaborLocalRepository {
                         ubicacion = authData.user.ubicacion,
                         direccion = authData.user.direccion
                     )
-                    Result.success(user)
+                    ApiResult.Success(user)
                 } else {
-                    Result.failure(Exception(body?.message ?: "Error en registro"))
+                    ApiResult.Error(body?.message ?: "Error en registro")
                 }
             } else {
                 val errorMessage = when (response.code()) {
@@ -158,10 +170,10 @@ class AuthSaborLocalRepository {
                     400 -> "Datos inválidos"
                     else -> "Error HTTP ${response.code()}"
                 }
-                Result.failure(Exception(errorMessage))
+                ApiResult.Error(errorMessage)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de red: ${e.message}", e))
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -175,7 +187,7 @@ class AuthSaborLocalRepository {
      * @param password Contraseña inicial
      * @param ubicacion Ubicación del productor
      * @param telefono Teléfono del productor
-     * @return Result con el usuario creado
+     * @return ApiResult con el usuario creado
      */
     suspend fun createProductorUser(
         nombre: String,
@@ -183,7 +195,7 @@ class AuthSaborLocalRepository {
         password: String,
         ubicacion: String,
         telefono: String
-    ): Result<User> = withContext(Dispatchers.IO) {
+    ): ApiResult<User> = withContext(Dispatchers.IO) {
         try {
             val request = com.example.miappmodular.data.remote.dto.auth.CreateProductorUserRequest(
                 nombre = nombre,
@@ -209,9 +221,9 @@ class AuthSaborLocalRepository {
                         ubicacion = authData.user.ubicacion,
                         direccion = authData.user.direccion
                     )
-                    Result.success(user)
+                    ApiResult.Success(user)
                 } else {
-                    Result.failure(Exception(body?.message ?: "Error al crear productor"))
+                    ApiResult.Error(body?.message ?: "Error al crear productor")
                 }
             } else {
                 val errorMessage = when (response.code()) {
@@ -220,10 +232,10 @@ class AuthSaborLocalRepository {
                     400 -> "Datos inválidos"
                     else -> "Error HTTP ${response.code()}"
                 }
-                Result.failure(Exception(errorMessage))
+                ApiResult.Error(errorMessage)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de red: ${e.message}", e))
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -232,9 +244,9 @@ class AuthSaborLocalRepository {
      *
      * Requiere estar autenticado (token en headers)
      *
-     * @return Result con el usuario actualizado
+     * @return ApiResult con el usuario actualizado
      */
-    suspend fun getProfile(): Result<User> = withContext(Dispatchers.IO) {
+    suspend fun getProfile(): ApiResult<User> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getProfile()
 
@@ -255,19 +267,19 @@ class AuthSaborLocalRepository {
                         ubicacion = userDto.ubicacion,
                         direccion = userDto.direccion
                     )
-                    Result.success(user)
+                    ApiResult.Success(user)
                 } else {
-                    Result.failure(Exception(body?.message ?: "Error obteniendo perfil"))
+                    ApiResult.Error(body?.message ?: "Error obteniendo perfil")
                 }
             } else {
                 val errorMessage = when (response.code()) {
                     401 -> "Sesión expirada"
                     else -> "Error HTTP ${response.code()}"
                 }
-                Result.failure(Exception(errorMessage))
+                ApiResult.Error(errorMessage)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de red: ${e.message}", e))
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 
@@ -276,9 +288,9 @@ class AuthSaborLocalRepository {
      *
      * Requiere estar autenticado con rol ADMIN
      *
-     * @return Result con la lista de usuarios
+     * @return ApiResult con la lista de usuarios
      */
-    suspend fun getAllUsers(): Result<List<User>> = withContext(Dispatchers.IO) {
+    suspend fun getAllUsers(): ApiResult<List<User>> = withContext(Dispatchers.IO) {
         try {
             val response = apiService.getAllUsers()
 
@@ -296,9 +308,9 @@ class AuthSaborLocalRepository {
                             direccion = userDto.direccion
                         )
                     }
-                    Result.success(users)
+                    ApiResult.Success(users)
                 } else {
-                    Result.failure(Exception(body?.message ?: "Error obteniendo usuarios"))
+                    ApiResult.Error(body?.message ?: "Error obteniendo usuarios")
                 }
             } else {
                 val errorMessage = when (response.code()) {
@@ -306,10 +318,10 @@ class AuthSaborLocalRepository {
                     403 -> "No tienes permisos para ver usuarios (requiere rol ADMIN)"
                     else -> "Error HTTP ${response.code()}"
                 }
-                Result.failure(Exception(errorMessage))
+                ApiResult.Error(errorMessage)
             }
         } catch (e: Exception) {
-            Result.failure(Exception("Error de red: ${e.message}", e))
+            ApiResult.Error("Error de red: ${e.message}", e)
         }
     }
 }

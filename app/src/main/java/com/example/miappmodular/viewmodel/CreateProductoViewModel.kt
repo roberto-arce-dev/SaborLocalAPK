@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.miappmodular.model.Producto
-import com.example.miappmodular.model.Result
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.repository.ProductoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,49 +47,63 @@ class CreateProductoViewModel(application: Application) : AndroidViewModel(appli
     val productorId: StateFlow<String> = _productorId.asStateFlow()
 
     /**
+    /**
      * Actualiza el nombre
+     */
      */
     fun onNombreChange(newNombre: String) {
         _nombre.value = newNombre
     }
 
     /**
+    /**
      * Actualiza la descripción
+     */
      */
     fun onDescripcionChange(newDescripcion: String) {
         _descripcion.value = newDescripcion
     }
 
     /**
+    /**
      * Actualiza el precio
+     */
      */
     fun onPrecioChange(newPrecio: String) {
         _precio.value = newPrecio
     }
 
     /**
+    /**
      * Actualiza la unidad
+     */
      */
     fun onUnidadChange(newUnidad: String) {
         _unidad.value = newUnidad
     }
 
     /**
+    /**
      * Actualiza el stock
+     */
      */
     fun onStockChange(newStock: String) {
         _stock.value = newStock
     }
 
     /**
+    /**
      * Actualiza el ID del productor
+     */
      */
     fun onProductorIdChange(newProductorId: String) {
         _productorId.value = newProductorId
     }
 
     /**
+    /**
      * Crea un nuevo producto
+     */
      */
     fun createProducto() {
         // Validar campos obligatorios
@@ -138,21 +152,25 @@ class CreateProductoViewModel(application: Application) : AndroidViewModel(appli
             )
 
             _uiState.value = when (result) {
-                is Result.Success -> CreateProductoUiState.Success(result.data)
-                is Result.Error -> CreateProductoUiState.Error(result.message)
+                is ApiResult.Success -> CreateProductoUiState.Success(result.data)
+                is ApiResult.Error -> CreateProductoUiState.Error(result.message)
             }
         }
     }
 
     /**
+    /**
      * Resetea el estado a Idle
+     */
      */
     fun resetState() {
         _uiState.value = CreateProductoUiState.Idle
     }
 
     /**
+    /**
      * Limpia el formulario
+     */
      */
     fun clearForm() {
         _nombre.value = ""

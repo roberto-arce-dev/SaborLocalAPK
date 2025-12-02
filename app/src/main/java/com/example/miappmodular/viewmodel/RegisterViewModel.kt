@@ -3,6 +3,7 @@ package com.example.miappmodular.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.miappmodular.model.ApiResult
 import com.example.miappmodular.model.User
 import com.example.miappmodular.repository.AuthSaborLocalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,6 +48,15 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     private val _direccion = MutableStateFlow("")
     val direccion: StateFlow<String> = _direccion.asStateFlow()
 
+    private val _role = MutableStateFlow("CLIENTE")
+    val role: StateFlow<String> = _role.asStateFlow()
+
+    private val _nombreNegocio = MutableStateFlow("")
+    val nombreNegocio: StateFlow<String> = _nombreNegocio.asStateFlow()
+
+    private val _descripcion = MutableStateFlow("")
+    val descripcion: StateFlow<String> = _descripcion.asStateFlow()
+
     /**
      * Actualiza el nombre del formulario
      */
@@ -90,9 +100,32 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
+     * Actualiza el rol seleccionado (CLIENTE o PRODUCTOR)
+     */
+    fun onRoleChange(newRole: String) {
+        _role.value = newRole.uppercase()
+    }
+
+    /**
+     * Actualiza el nombre del negocio (solo PRODUCTOR)
+     */
+    fun onNombreNegocioChange(newNombreNegocio: String) {
+        _nombreNegocio.value = newNombreNegocio
+    }
+
+    /**
+     * Actualiza la descripción del negocio (solo PRODUCTOR)
+     */
+    fun onDescripcionChange(newDescripcion: String) {
+        _descripcion.value = newDescripcion
+    }
+
+    /**
      * Realiza el registro de un nuevo CLIENTE
      */
     fun register() {
+        val roleValue = _role.value.uppercase()
+
         // Validar campos obligatorios
         if (_nombre.value.isBlank() || _email.value.isBlank() || _password.value.isBlank()) {
             _uiState.value = RegisterUiState.Error("Por favor completa todos los campos obligatorios")
@@ -117,21 +150,35 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
             return
         }
 
+        // Validar rol seleccionado
+        if (roleValue != "CLIENTE" && roleValue != "PRODUCTOR") {
+            _uiState.value = RegisterUiState.Error("Selecciona un tipo de cuenta válido")
+            return
+        }
+
+        // Validaciones específicas para PRODUCTOR
+        if (roleValue == "PRODUCTOR" && _nombreNegocio.value.isBlank()) {
+            _uiState.value = RegisterUiState.Error("El nombre del negocio es obligatorio para productores")
+            return
+        }
+
         _uiState.value = RegisterUiState.Loading
 
         viewModelScope.launch {
             val result = repository.register(
-                nombre = _nombre.value,
                 email = _email.value,
                 password = _password.value,
+                role = roleValue,
+                nombre = _nombre.value,
                 telefono = _telefono.value.ifBlank { null },
-                direccion = _direccion.value.ifBlank { null }
+                direccion = _direccion.value.ifBlank { null },
+                nombreNegocio = if (roleValue == "PRODUCTOR") _nombreNegocio.value else null,
+                descripcion = if (roleValue == "PRODUCTOR") _descripcion.value.ifBlank { null } else null
             )
 
-            _uiState.value = if (result.isSuccess) {
-                RegisterUiState.Success(result.getOrNull()!!)
-            } else {
-                RegisterUiState.Error(result.exceptionOrNull()?.message ?: "Error desconocido")
+            _uiState.value = when (result) {
+                is ApiResult.Success -> RegisterUiState.Success(result.data)
+                is ApiResult.Error -> RegisterUiState.Error(result.message)
             }
         }
     }
@@ -153,6 +200,9 @@ class RegisterViewModel(application: Application) : AndroidViewModel(application
         _confirmPassword.value = ""
         _telefono.value = ""
         _direccion.value = ""
+        _role.value = "CLIENTE"
+        _nombreNegocio.value = ""
+        _descripcion.value = ""
     }
 }
 

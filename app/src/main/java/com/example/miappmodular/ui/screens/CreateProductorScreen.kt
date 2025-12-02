@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.miappmodular.ui.components.StandardScaffold
 import com.example.miappmodular.viewmodel.CreateProductorUiState
 import com.example.miappmodular.viewmodel.CreateProductorViewModel
 
@@ -99,21 +100,9 @@ fun CreateProductorScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Crear Productor") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+    StandardScaffold(
+        title = "Crear Productor",
+        onNavigateBack = onNavigateBack
     ) { paddingValues ->
         Column(
             modifier = Modifier

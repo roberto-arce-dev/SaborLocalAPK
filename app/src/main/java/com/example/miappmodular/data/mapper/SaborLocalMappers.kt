@@ -24,9 +24,9 @@ fun ProductorDto.toDomain(): Productor {
     return Productor(
         id = id,
         nombre = nombre,
-        ubicacion = ubicacion,
-        telefono = telefono,
-        email = email,
+        ubicacion = ubicacion ?: "",
+        telefono = telefono ?: "",
+        email = email ?: "",
         imagen = imagen,
         imagenThumbnail = imagenThumbnail
     )
@@ -34,11 +34,50 @@ fun ProductorDto.toDomain(): Productor {
 
 /**
  * Convierte ProductoDto a Producto
- * Requiere que el productor esté populated en el DTO
+ *
+ * **IMPORTANTE:** El API puede retornar productor de 3 formas:
+ * 1. String (solo ID)
+ * 2. Map parcial {_id, telefono}
+ * 3. Map completo con todos los campos
+ *
+ * Este mapper maneja los 3 casos.
  */
-fun ProductoDto.toDomain(): Producto? {
-    // Obtener el productor populated
-    val productorPopulated = getProductorPopulated() ?: return null
+fun ProductoDto.toDomain(): Producto {
+    val productorObj = when (productor) {
+        is String -> {
+            // Caso 1: Solo ID
+            Productor(
+                id = productor,
+                nombre = null,
+                ubicacion = null,
+                telefono = null,
+                email = null
+            )
+        }
+        is Map<*, *> -> {
+            // Caso 2 y 3: Objeto parcial o completo
+            val map = productor as Map<String, Any>
+            Productor(
+                id = map["_id"] as? String ?: "",
+                nombre = map["nombre"] as? String,
+                ubicacion = map["ubicacion"] as? String,
+                telefono = map["telefono"] as? String,
+                email = map["email"] as? String,
+                imagen = map["imagen"] as? String,
+                imagenThumbnail = map["imagenThumbnail"] as? String
+            )
+        }
+        else -> {
+            // Fallback: Productor vacío
+            Productor(
+                id = "",
+                nombre = null,
+                ubicacion = null,
+                telefono = null,
+                email = null
+            )
+        }
+    }
 
     return Producto(
         id = id,
@@ -47,7 +86,7 @@ fun ProductoDto.toDomain(): Producto? {
         precio = precio,
         unidad = unidad,
         stock = stock,
-        productor = productorPopulated.toDomain(),
+        productor = productorObj,
         imagen = imagen,
         imagenThumbnail = imagenThumbnail
     )
@@ -68,12 +107,32 @@ fun ClienteDto.toDomain(): Cliente {
 
 /**
  * Convierte PedidoItemDto a PedidoItem
+ *
+ * **ACTUALIZADO:** Alineado con la estructura real del backend
+ * El backend retorna: producto (String ID), cantidad, precio
  */
-fun PedidoItemDto.toDomain(): PedidoItem? {
-    val productoPopulated = getProductoPopulated()?.toDomain() ?: return null
+fun PedidoItemDto.toDomain(): PedidoItem {
+    // Crear producto mínimo con los datos disponibles
+    val productoMinimo = Producto(
+        id = producto,  // ✅ Actualizado de productoId a producto
+        nombre = "Producto #$producto",  // ✅ No viene del backend, usar ID
+        descripcion = "",
+        precio = precio,
+        unidad = "",
+        stock = 0,
+        productor = Productor(
+            id = "",
+            nombre = null,
+            ubicacion = null,
+            telefono = null,
+            email = null,
+            imagen = null,
+            imagenThumbnail = null
+        )
+    )
 
     return PedidoItem(
-        producto = productoPopulated,
+        producto = productoMinimo,
         cantidad = cantidad,
         precio = precio
     )
@@ -81,29 +140,25 @@ fun PedidoItemDto.toDomain(): PedidoItem? {
 
 /**
  * Convierte PedidoDto a Pedido
+ *
+ * **ACTUALIZADO:** El backend ahora usa .populate('cliente') y retorna objeto completo
+ * El backend retorna: cliente (objeto con _id y nombre), items, createdAt
  */
 fun PedidoDto.toDomain(): Pedido? {
-    // Convertir cliente
-    val clienteObj = when (cliente) {
-        is Map<*, *> -> {
-            val map = cliente as Map<String, Any>
-            ClienteDto(
-                id = map["_id"] as? String ?: "",
-                nombre = map["nombre"] as? String ?: "",
-                email = map["email"] as? String ?: "",
-                telefono = map["telefono"] as? String ?: "",
-                direccion = map["direccion"] as? String ?: ""
-            ).toDomain()
-        }
-        else -> return null
-    }
+    // Validar que tengamos fecha
+    val fecha = createdAt ?: return null
+
+    // Usar el objeto cliente completo del backend
+    val clienteObj = Cliente(
+        id = cliente.id,
+        nombre = cliente.nombre ?: "Cliente #${cliente.id}",
+        email = cliente.email ?: "",
+        telefono = cliente.telefono ?: "",
+        direccion = cliente.direccion ?: direccionEntrega ?: ""
+    )
 
     // Convertir items
-    val itemsConverted = items.mapNotNull { it.toDomain() }
-    if (itemsConverted.size != items.size) {
-        // Algunos items no se pudieron convertir
-        return null
-    }
+    val itemsConverted = items.map { it.toDomain() }
 
     return Pedido(
         id = id,
@@ -139,7 +194,7 @@ fun List<ProductorDto>.toProductorDomainList(): List<Productor> {
 }
 
 fun List<ProductoDto>.toProductoDomainList(): List<Producto> {
-    return mapNotNull { it.toDomain() }
+    return map { it.toDomain() }
 }
 
 fun List<ClienteDto>.toClienteDomainList(): List<Cliente> {
@@ -147,5 +202,5 @@ fun List<ClienteDto>.toClienteDomainList(): List<Cliente> {
 }
 
 fun List<PedidoDto>.toPedidoDomainList(): List<Pedido> {
-    return mapNotNull { it.toDomain() }
+    return mapNotNull { it.toDomain() }  // ✅ Usa mapNotNull para filtrar nulls
 }

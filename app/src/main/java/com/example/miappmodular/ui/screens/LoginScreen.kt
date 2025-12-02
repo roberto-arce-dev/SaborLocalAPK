@@ -57,15 +57,8 @@ fun LoginScreen(
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Iniciar Sesión") },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+        // Sin topBar para un diseño más limpio y moderno
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
