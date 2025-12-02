@@ -14,3 +14,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Ignore all .md files except README.md
+*.md
+!README.md
